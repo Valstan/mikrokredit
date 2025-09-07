@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# IDE/editor
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Caches
+.pytest_cache/
+.mypy_cache/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Local DB (keep if you prefer, but usually not needed in VCS)
+/mikrokredit.db
