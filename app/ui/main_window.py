@@ -395,7 +395,11 @@ class MainWindow(QMainWindow):
         # Auto-fit columns
         self.table.resizeColumnsToContents()
 
-        self.status_label.setText(f"Горящие (<5 дней): {urgent_count} | Всего кредитов: {len(all_loans)}")
+        # Status with totals
+        total_remaining = sum(unpaid_total for _, _, _, _, unpaid_total, _, _ in enriched)
+        self.status_label.setText(
+            f"Горящие (<5 дней): {urgent_count} | Всего кредитов: {len(all_loans)} | Не оплачено всего: {total_remaining:.2f}"
+        )
 
         if not self._create_mode:
             if self.table.rowCount() > 0 and not self.table.selectedItems():

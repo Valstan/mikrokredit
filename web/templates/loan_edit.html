@@ -42,15 +42,21 @@
   <div class="mt-3 d-flex gap-2">
     <button class="btn btn-primary" type="submit">Сохранить</button>
     {% if loan %}
-    <form method="post" action="{{ url_for('views.delete_loan_route', loan_id=loan.id) }}" onsubmit="return confirm('Удалить кредит?')">
-      <button class="btn btn-outline-danger" type="submit">Удалить</button>
-    </form>
+    <a class="btn btn-outline-danger" href="#" onclick="if(confirm('Удалить кредит?')){ document.getElementById('delete-form').submit(); } return false;">Удалить</a>
     {% endif %}
     {% if loan and loan.website %}
     <a class="btn btn-outline-secondary" href="{{ loan.website if loan.website.startswith('http') else 'https://' ~ loan.website }}" target="_blank">Открыть сайт</a>
     {% endif %}
   </div>
 </form>
+
+{% if loan %}
+<form id="delete-form" method="post" action="{{ url_for('views.delete_loan_route', loan_id=loan.id) }}"></form>
+{% endif %}
+
+{% if not loan %}
+<div class="alert alert-info mt-3">Сохраните кредит, чтобы добавить график платежей.</div>
+{% endif %}
 
 {% if loan %}
 <hr>
