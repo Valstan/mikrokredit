@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+.venv
+venv
+env
+.git
+.gitignore
+.idea
+.vscode
+build
+dist
+*.spec
+mikrokredit.db
