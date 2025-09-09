@@ -16,10 +16,10 @@ if DATABASE_URL.startswith("sqlite:"):
     engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
 else:
     print("DEBUG: Using PostgreSQL database")
-    # For PostgreSQL, replace postgresql:// with postgresql+psycopg://
+    # For PostgreSQL, use psycopg2 driver (psycopg-binary provides psycopg2)
     if DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
-        print(f"DEBUG: Updated DATABASE_URL = {DATABASE_URL}")
+        # Keep original postgresql:// URL - SQLAlchemy will use psycopg2 automatically
+        print(f"DEBUG: Using original DATABASE_URL = {DATABASE_URL}")
     try:
         engine = create_engine(DATABASE_URL, echo=False, future=True)
         print("DEBUG: Engine created successfully")
