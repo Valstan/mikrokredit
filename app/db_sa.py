@@ -4,22 +4,25 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{os.path.abspath(os.environ.get('MIKROKREDIT_DB', 'mikrokredit.db'))}"
+# Импортируем конфигурацию
+try:
+    from .config import DATABASE_URL, USE_LOCAL_SQLITE
+except ImportError:
+    # Fallback для случаев, когда config.py недоступен
+    DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{os.path.abspath(os.environ.get('MIKROKREDIT_DB', 'mikrokredit.db'))}"
+    USE_LOCAL_SQLITE = False
 
 print(f"DEBUG: DATABASE_URL = {DATABASE_URL}")
+print(f"DEBUG: USE_LOCAL_SQLITE = {USE_LOCAL_SQLITE}")
 
 # SQLite needs check_same_thread=False for use across threads
-# For PostgreSQL, use psycopg (not psycopg2)
+# For PostgreSQL, use psycopg2 driver
 if DATABASE_URL.startswith("sqlite:"):
     print("DEBUG: Using SQLite database")
     connect_args = {"check_same_thread": False}
     engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
 else:
     print("DEBUG: Using PostgreSQL database")
-    # For PostgreSQL, use psycopg2 driver (psycopg-binary provides psycopg2)
-    if DATABASE_URL.startswith("postgresql://"):
-        # Keep original postgresql:// URL - SQLAlchemy will use psycopg2 automatically
-        print(f"DEBUG: Using original DATABASE_URL = {DATABASE_URL}")
     try:
         engine = create_engine(DATABASE_URL, echo=False, future=True)
         print("DEBUG: Engine created successfully")
