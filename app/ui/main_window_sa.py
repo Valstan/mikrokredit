@@ -73,24 +73,24 @@ class MainWindow(QMainWindow):
         }
         QPushButton {
             font-size: 14px;
-            padding: 8px 12px;
-            min-height: 20px;
+            padding: 10px 16px;
+            min-height: 35px;
         }
         QLineEdit, QTextEdit, QDateEdit, QDoubleSpinBox {
             font-size: 14px;
-            padding: 6px;
-            min-height: 20px;
+            padding: 8px;
+            min-height: 30px;
         }
         QTableWidget {
             font-size: 14px;
         }
         QTableWidget::item {
-            padding: 8px;
-            min-height: 25px;
+            padding: 10px;
+            min-height: 35px;
         }
         QHeaderView::section {
             font-size: 14px;
-            padding: 8px;
+            padding: 10px;
             font-weight: bold;
         }
         QToolBar {
@@ -352,11 +352,11 @@ class MainWindow(QMainWindow):
                     action_button.setStyleSheet("""
                         background-color: #28a745; 
                         color: white; 
-                        font-size: 12px;
-                        padding: 6px 12px;
-                        min-height: 20px;
+                        font-size: 14px;
+                        padding: 10px 16px;
+                        min-height: 35px;
                         border: none;
-                        border-radius: 4px;
+                        border-radius: 6px;
                     """)
                     action_button.clicked.connect(lambda checked, url=loan["website"]: self._open_payment_site(url))
                 else:
@@ -364,11 +364,11 @@ class MainWindow(QMainWindow):
                     action_button.setStyleSheet("""
                         background-color: #007bff; 
                         color: white; 
-                        font-size: 12px;
-                        padding: 6px 12px;
-                        min-height: 20px;
+                        font-size: 14px;
+                        padding: 10px 16px;
+                        min-height: 35px;
                         border: none;
-                        border-radius: 4px;
+                        border-radius: 6px;
                     """)
                     action_button.clicked.connect(lambda checked, url=loan["website"]: self._open_payment_site(url))
                 
@@ -561,19 +561,19 @@ class MainWindow(QMainWindow):
                 toggle_button.setStyleSheet("""
                     background-color: #28a745; 
                     color: white; 
-                    font-size: 12px;
-                    padding: 4px 8px;
-                    min-height: 20px;
+                    font-size: 14px;
+                    padding: 8px 12px;
+                    min-height: 30px;
                     border: none;
-                    border-radius: 3px;
+                    border-radius: 5px;
                 """ if not inst["paid"] else """
                     background-color: #dc3545; 
                     color: white; 
-                    font-size: 12px;
-                    padding: 4px 8px;
-                    min-height: 20px;
+                    font-size: 14px;
+                    padding: 8px 12px;
+                    min-height: 30px;
                     border: none;
-                    border-radius: 3px;
+                    border-radius: 5px;
                 """)
                 toggle_button.clicked.connect(lambda checked, inst_id=inst["id"], current_paid=inst["paid"]: self._toggle_installment_paid(inst_id, not current_paid))
                 
@@ -581,11 +581,11 @@ class MainWindow(QMainWindow):
                 delete_button.setStyleSheet("""
                     background-color: #dc3545; 
                     color: white; 
-                    font-size: 12px;
-                    padding: 4px 8px;
-                    min-height: 20px;
+                    font-size: 14px;
+                    padding: 8px 12px;
+                    min-height: 30px;
                     border: none;
-                    border-radius: 3px;
+                    border-radius: 5px;
                 """)
                 delete_button.clicked.connect(lambda checked, inst_id=inst["id"]: self._delete_installment(inst_id))
                 

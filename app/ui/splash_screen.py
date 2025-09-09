@@ -18,7 +18,7 @@ class SplashScreen(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Микрокредиты - Загрузка")
-        self.setFixedSize(550, 350)
+        self.setFixedSize(600, 400)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
@@ -56,17 +56,17 @@ class SplashScreen(QWidget):
         
         # Внутренний layout
         inner_layout = QVBoxLayout(main_frame)
-        inner_layout.setContentsMargins(40, 40, 40, 40)
-        inner_layout.setSpacing(25)
+        inner_layout.setContentsMargins(50, 50, 50, 50)
+        inner_layout.setSpacing(30)
         
         # Иконка и заголовок
         icon_label = QLabel("💰")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon_label.setStyleSheet("""
             QLabel {
-                font-size: 48px;
-                margin-bottom: 15px;
-                padding: 5px;
+                font-size: 64px;
+                margin-bottom: 20px;
+                padding: 10px;
             }
         """)
         inner_layout.addWidget(icon_label)
@@ -76,11 +76,11 @@ class SplashScreen(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
-                font-size: 26px;
+                font-size: 32px;
                 font-weight: bold;
                 color: #495057;
-                margin-bottom: 15px;
-                padding: 5px;
+                margin-bottom: 20px;
+                padding: 10px;
             }
         """)
         inner_layout.addWidget(title_label)
@@ -90,10 +90,10 @@ class SplashScreen(QWidget):
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle_label.setStyleSheet("""
             QLabel {
-                font-size: 16px;
+                font-size: 20px;
                 color: #6c757d;
-                margin-bottom: 25px;
-                padding: 5px;
+                margin-bottom: 30px;
+                padding: 10px;
             }
         """)
         inner_layout.addWidget(subtitle_label)
@@ -104,19 +104,19 @@ class SplashScreen(QWidget):
         self.progress_bar.setValue(0)
         self.progress_bar.setStyleSheet("""
             QProgressBar {
-                border: 2px solid #dee2e6;
-                border-radius: 8px;
+                border: 3px solid #dee2e6;
+                border-radius: 10px;
                 text-align: center;
                 font-weight: bold;
-                font-size: 14px;
-                height: 30px;
+                font-size: 16px;
+                height: 40px;
                 background-color: #f8f9fa;
-                padding: 5px;
+                padding: 8px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #007bff, stop:1 #0056b3);
-                border-radius: 6px;
+                border-radius: 8px;
             }
         """)
         inner_layout.addWidget(self.progress_bar)
@@ -126,10 +126,10 @@ class SplashScreen(QWidget):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             QLabel {
-                font-size: 14px;
+                font-size: 16px;
                 color: #495057;
-                margin-top: 15px;
-                padding: 5px;
+                margin-top: 20px;
+                padding: 10px;
             }
         """)
         inner_layout.addWidget(self.status_label)
@@ -139,10 +139,10 @@ class SplashScreen(QWidget):
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("""
             QLabel {
-                font-size: 12px;
+                font-size: 14px;
                 color: #adb5bd;
-                margin-top: 15px;
-                padding: 5px;
+                margin-top: 20px;
+                padding: 10px;
             }
         """)
         inner_layout.addWidget(version_label)
