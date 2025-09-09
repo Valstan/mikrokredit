@@ -116,7 +116,8 @@ class MainWindow(QMainWindow):
         self.edit_loan_date = QDateEdit(); self.edit_loan_date.setCalendarPopup(True); self.edit_loan_date.setDisplayFormat("d MMMM yyyy"); self.edit_loan_date.installEventFilter(self._no_wheel); self.edit_loan_date.dateChanged.connect(self._mark_dirty)
         self.edit_due_date = QDateEdit(); self.edit_due_date.setCalendarPopup(True); self.edit_due_date.setDisplayFormat("d MMMM yyyy"); self.edit_due_date.installEventFilter(self._no_wheel); self.edit_due_date.dateChanged.connect(self._mark_dirty)
         self.edit_amount_borrowed = QDoubleSpinBox(); self.edit_amount_borrowed.setDecimals(2); self.edit_amount_borrowed.setMaximum(1_000_000_000); self.edit_amount_borrowed.installEventFilter(self._no_wheel); self.edit_amount_borrowed.valueChanged.connect(self._mark_dirty)
-        self.edit_amount_due = QDoubleSpinBox(); self.edit_amount_due.setDecimals(2); self.edit_amount_due.setMaximum(1_000_000_000); self.edit_amount_due.installEventFilter(self._no_wheel); self.edit_amount_due.valueChanged.connect(self._mark_dirty)
+        # `amount_due` is derived from the installments and should not be user-editable.
+        self.edit_amount_due = QDoubleSpinBox(); self.edit_amount_due.setDecimals(2); self.edit_amount_due.setMaximum(1_000_000_000); self.edit_amount_due.installEventFilter(self._no_wheel); self.edit_amount_due.setReadOnly(True)
         self.edit_risky = QCheckBox("Рискованная организация (скрытые услуги)"); self.edit_risky.toggled.connect(self._mark_dirty)
         self.edit_notes = QTextEdit(); self.edit_notes.textChanged.connect(self._mark_dirty)
         self.edit_payment_methods = QTextEdit(); self.edit_payment_methods.textChanged.connect(self._mark_dirty)

@@ -17,8 +17,11 @@ def healthz():
 
 @bp.route("/")
 def index():
+    q = (request.args.get("q", "") or "").strip().lower()
     with next(get_session()) as session:  # type: Session
         loans = session.execute(select(LoanORM)).scalars().all()
+        if q:
+            loans = [l for l in loans if q in (l.org_name or "").lower() or q in (l.website or "").lower() or q in (l.notes or "").lower()]
         enriched = []
         for l in loans:
             unpaid_total = session.execute(
@@ -47,7 +50,7 @@ def index():
                 "paid": derived_paid,
             })
         enriched.sort(key=lambda x: ("9999-12-31" if x["next_date"] is None else x["next_date"], x["loan"].id or 0))
-        return render_template("index.html", items=enriched)
+        return render_template("index.html", items=enriched, q=q)
 
 
 @bp.route("/loan/new", methods=["GET", "POST"])
@@ -109,6 +112,7 @@ def loan_edit(loan_id: int | None = None):
         loan = session.get(LoanORM, loan_id) if loan_id is not None else None
         insts = []
         remaining = 0.0
+        total_due = 0.0
         last_date = None
         if loan is not None:
             insts = session.execute(
@@ -121,10 +125,13 @@ def loan_edit(loan_id: int | None = None):
                     InstallmentORM.loan_id == loan.id, InstallmentORM.paid == 0
                 )
             ).scalar_one()
+            total_due = session.execute(
+                select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == loan.id)
+            ).scalar_one()
             last_date = session.execute(
                 select(func.max(InstallmentORM.due_date)).where(InstallmentORM.loan_id == loan.id)
             ).scalar_one()
-        return render_template("loan_edit.html", loan=loan, installments=insts, remaining=remaining, last_date=last_date)
+        return render_template("loan_edit.html", loan=loan, installments=insts, remaining=remaining, total_due=total_due, last_date=last_date)
 
 
 @bp.post("/loan/<int:loan_id>/installments/add")
@@ -155,6 +162,36 @@ def add_inst(loan_id: int):
     flash("Платеж добавлен", "success")
     return redirect(url_for("views.loan_edit", loan_id=loan_id))
 
+
+@bp.post("/loan/<int:loan_id>/installments/<int:inst_id>/edit")
+def edit_inst(loan_id: int, inst_id: int):
+    due_date = request.form.get("due_date", "")
+    amount = float(request.form.get("amount", 0) or 0)
+    if amount <= 0:
+        flash("Сумма должна быть больше нуля", "error")
+        return redirect(url_for("views.loan_edit", loan_id=loan_id))
+    with next(get_session()) as session:  # type: Session
+        loan = session.get(LoanORM, loan_id)
+        if loan is None:
+            flash("Кредит не найден", "error")
+            return redirect(url_for("views.index"))
+        inst = session.get(InstallmentORM, inst_id)
+        if inst is None or inst.loan_id != loan_id:
+            flash("Платеж не найден", "error")
+            return redirect(url_for("views.loan_edit", loan_id=loan_id))
+        inst.due_date = due_date
+        inst.amount = amount
+        # Recalc derived fields
+        total = session.execute(
+            select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == loan_id)
+        ).scalar_one()
+        unpaid = session.execute(
+            select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == loan_id, InstallmentORM.paid == 0)
+        ).scalar_one()
+        loan.amount_due = float(total or 0.0)
+        loan.is_paid = 1 if (unpaid or 0.0) == 0.0 else 0
+    flash("Платеж изменен", "success")
+    return redirect(url_for("views.loan_edit", loan_id=loan_id))
 
 @bp.post("/loan/<int:loan_id>/installments/<int:inst_id>/toggle")
 def toggle_inst(loan_id: int, inst_id: int):
