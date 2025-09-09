@@ -17,7 +17,7 @@ def healthz():
 
 @bp.route("/")
 def index():
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:
         loans = session.execute(select(LoanORM)).scalars().all()
         enriched = []
         for l in loans:
@@ -68,7 +68,7 @@ def loan_edit(loan_id: int | None = None):
         if due_date < loan_date:
             flash("Дата возврата не может быть раньше даты оформления", "error")
             return redirect(request.url)
-        with next(get_session()) as session:  # type: Session
+        with get_session() as session:
             if loan_id is None:
                 loan = LoanORM(
                     website=website,
