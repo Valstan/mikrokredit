@@ -18,7 +18,7 @@ class SplashScreen(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Микрокредиты - Загрузка")
-        self.setFixedSize(600, 400)
+        self.setFixedSize(650, 450)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
@@ -56,17 +56,17 @@ class SplashScreen(QWidget):
         
         # Внутренний layout
         inner_layout = QVBoxLayout(main_frame)
-        inner_layout.setContentsMargins(50, 50, 50, 50)
-        inner_layout.setSpacing(30)
+        inner_layout.setContentsMargins(60, 60, 60, 60)
+        inner_layout.setSpacing(35)
         
         # Иконка и заголовок
         icon_label = QLabel("💰")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon_label.setStyleSheet("""
             QLabel {
-                font-size: 64px;
-                margin-bottom: 20px;
-                padding: 10px;
+                font-size: 72px;
+                margin-bottom: 25px;
+                padding: 15px;
             }
         """)
         inner_layout.addWidget(icon_label)
@@ -76,11 +76,11 @@ class SplashScreen(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
-                font-size: 32px;
+                font-size: 36px;
                 font-weight: bold;
                 color: #495057;
-                margin-bottom: 20px;
-                padding: 10px;
+                margin-bottom: 25px;
+                padding: 15px;
             }
         """)
         inner_layout.addWidget(title_label)
@@ -90,10 +90,10 @@ class SplashScreen(QWidget):
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle_label.setStyleSheet("""
             QLabel {
-                font-size: 20px;
+                font-size: 22px;
                 color: #6c757d;
-                margin-bottom: 30px;
-                padding: 10px;
+                margin-bottom: 35px;
+                padding: 15px;
             }
         """)
         inner_layout.addWidget(subtitle_label)
@@ -105,18 +105,18 @@ class SplashScreen(QWidget):
         self.progress_bar.setStyleSheet("""
             QProgressBar {
                 border: 3px solid #dee2e6;
-                border-radius: 10px;
+                border-radius: 12px;
                 text-align: center;
                 font-weight: bold;
-                font-size: 16px;
-                height: 40px;
+                font-size: 18px;
+                height: 45px;
                 background-color: #f8f9fa;
-                padding: 8px;
+                padding: 10px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #007bff, stop:1 #0056b3);
-                border-radius: 8px;
+                border-radius: 10px;
             }
         """)
         inner_layout.addWidget(self.progress_bar)
@@ -126,10 +126,10 @@ class SplashScreen(QWidget):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             QLabel {
-                font-size: 16px;
+                font-size: 18px;
                 color: #495057;
-                margin-top: 20px;
-                padding: 10px;
+                margin-top: 25px;
+                padding: 15px;
             }
         """)
         inner_layout.addWidget(self.status_label)
@@ -139,10 +139,10 @@ class SplashScreen(QWidget):
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("""
             QLabel {
-                font-size: 14px;
+                font-size: 16px;
                 color: #adb5bd;
-                margin-top: 20px;
-                padding: 10px;
+                margin-top: 25px;
+                padding: 15px;
             }
         """)
         inner_layout.addWidget(version_label)
