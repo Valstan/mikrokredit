@@ -1,8 +1,13 @@
 from __future__ import annotations
 import os
+import sys
 import sqlite3
 from datetime import date
 from sqlalchemy.orm import Session
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.db_sa import engine
 from app.models_sa import Base, LoanORM, InstallmentORM
 
