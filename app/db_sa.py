@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from typing import Generator
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -15,7 +16,11 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 
 @contextmanager
+<<<<<<< HEAD
 def get_session():
+=======
+def get_session() -> Generator[Session, None, None]:
+>>>>>>> da81666671349275626846979ca60bfa79f62aa3
     session = SessionLocal()
     try:
         yield session

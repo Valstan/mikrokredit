@@ -54,9 +54,11 @@ class LoanDialog(QDialog):
         self.amount_borrowed.setDecimals(2)
         self.amount_borrowed.setMaximum(1_000_000_000)
 
+        # `amount_due` is calculated from the schedule and should not be edited by the user
         self.amount_due = QDoubleSpinBox()
         self.amount_due.setDecimals(2)
         self.amount_due.setMaximum(1_000_000_000)
+        self.amount_due.setReadOnly(True)
 
         self.due_date = QDateEdit()
         self.due_date.setCalendarPopup(True)

@@ -23,6 +23,12 @@
       <label class="form-label">Сумма взята</label>
       <input type="number" step="0.01" name="amount_borrowed" class="form-control" value="{{ loan.amount_borrowed if loan else '' }}" required>
     </div>
+    {% if loan %}
+    <div class="col-md-6">
+      <label class="form-label">Сумма к возврату</label>
+      <input type="number" class="form-control" value="{{ '%.2f'|format(remaining + 0) + '' if false else '%.2f'|format(total_due if total_due is defined else 0) }}" readonly>
+    </div>
+    {% endif %}
     <div class="col-md-6">
       <label class="form-label">Рискованная организация</label>
       <div class="form-check">
@@ -92,6 +98,11 @@
       <td>{{ 'Да' if inst.paid else 'Нет' }}</td>
       <td>{{ inst.paid_date or '' }}</td>
       <td>
+        <form method="post" action="{{ url_for('views.edit_inst', loan_id=loan.id, inst_id=inst.id) }}" class="d-inline">
+          <input type="date" name="due_date" value="{{ inst.due_date }}" class="form-control form-control-sm d-inline-block" style="width: 170px;">
+          <input type="number" step="0.01" name="amount" value="{{ '%.2f'|format(inst.amount) }}" class="form-control form-control-sm d-inline-block text-end" style="width: 130px;">
+          <button class="btn btn-sm btn-outline-success" type="submit">Изменить</button>
+        </form>
         <form method="post" action="{{ url_for('views.toggle_inst', loan_id=loan.id, inst_id=inst.id) }}" class="d-inline">
           <input type="hidden" name="paid" value="{{ 0 if inst.paid else 1 }}">
           <button class="btn btn-sm btn-outline-primary" type="submit">{{ 'Сделать не оплачен' if inst.paid else 'Оплачен' }}</button>
@@ -106,5 +117,6 @@
   </tbody>
 </table>
 </div>
+<div class="mt-2 text-muted">Всего по графику: <b>{{ '%.2f'|format(total_due if total_due is defined else 0) }}</b> | Не оплачено: <b>{{ '%.2f'|format(remaining) }}</b></div>
 {% endif %}
 {% endblock %}

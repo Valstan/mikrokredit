@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
 <h4>Кредиты</h4>
+<form class="row g-2 mb-3" method="get" action="{{ url_for('views.index') }}">
+  <div class="col-md-6">
+    <input class="form-control" type="search" placeholder="Поиск по сайту/банку/заметкам" name="q" value="{{ q or '' }}">
+  </div>
+  <div class="col-md-6">
+    <button class="btn btn-outline-secondary" type="submit">Фильтр</button>
+    {% if q %}<a class="btn btn-outline-dark" href="{{ url_for('views.index') }}">Сбросить</a>{% endif %}
+  </div>
+</form>
 <div class="table-responsive">
 <table class="table table-striped align-middle">
   <thead>
@@ -12,13 +21,15 @@
       <th>Взято</th>
       <th>Осталось</th>
       <th>Дата (последняя)</th>
+      <th>Сайт</th>
       <th></th>
     </tr>
   </thead>
   <tbody>
     {% for it in items %}
     {% set l = it.loan %}
-    <tr class="{{ 'table-success' if it.paid else ('table-warning' if it.next_date else '') }}">
+    {% set urgent = (it.next_date and (it.next_date - it.next_date.__class__.today()).days < 5) %}
+    <tr class="{{ 'table-success' if it.paid else ('table-danger' if urgent else ('table-warning' if it.next_date else '')) }}">
       <td>{{ l.id }}</td>
       <td>{{ l.org_name }}</td>
       <td>{{ it.next_date or '' }}</td>
@@ -26,6 +37,11 @@
       <td class="text-end">{{ '%.2f'|format(l.amount_borrowed) }}</td>
       <td class="text-end">{{ '%.2f'|format(it.remaining) }}</td>
       <td>{{ it.last_date or '' }}</td>
+      <td>
+        {% if l.website %}
+          <a class="btn btn-outline-secondary btn-sm" href="{{ l.website if l.website.startswith('http') else 'https://' ~ l.website }}" target="_blank">Открыть сайт</a>
+        {% endif %}
+      </td>
       <td>
         <a class="btn btn-primary btn-sm" href="{{ url_for('views.loan_edit', loan_id=l.id) }}">Открыть</a>
       </td>
