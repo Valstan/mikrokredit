@@ -23,6 +23,7 @@ def index():
         if q:
             loans = [l for l in loans if q in (l.org_name or "").lower() or q in (l.website or "").lower() or q in (l.notes or "").lower()]
         enriched = []
+        today = date.today()
         for l in loans:
             unpaid_total = session.execute(
                 select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(
@@ -41,13 +42,21 @@ def index():
             total_due = session.execute(
                 select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == l.id)
             ).scalar_one()
+            next_date = (next_row.due_date if next_row else None)
+            # Compute urgent flag safely with string ISO dates
+            try:
+                days_left = None if next_date is None else (date.fromisoformat(next_date) - today).days
+            except Exception:
+                days_left = None
+            urgent = (days_left is not None) and (days_left < 5)
             enriched.append({
                 "loan": l,
-                "next_date": (next_row.due_date if next_row else None),
+                "next_date": next_date,
                 "next_amount": (next_row.amount if next_row else None),
                 "remaining": float(unpaid_total or 0.0),
                 "last_date": last_date,
                 "paid": derived_paid,
+                "urgent": urgent,
             })
         enriched.sort(key=lambda x: ("9999-12-31" if x["next_date"] is None else x["next_date"], x["loan"].id or 0))
         return render_template("index.html", items=enriched, q=q)

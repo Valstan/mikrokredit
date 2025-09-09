@@ -28,8 +28,7 @@
   <tbody>
     {% for it in items %}
     {% set l = it.loan %}
-    {% set urgent = (it.next_date and (it.next_date - it.next_date.__class__.today()).days < 5) %}
-    <tr class="{{ 'table-success' if it.paid else ('table-danger' if urgent else ('table-warning' if it.next_date else '')) }}">
+    <tr class="{{ 'table-success' if it.paid else ('table-danger' if it.urgent else ('table-warning' if it.next_date else '')) }}">
       <td>{{ l.id }}</td>
       <td>{{ l.org_name }}</td>
       <td>{{ it.next_date or '' }}</td>
