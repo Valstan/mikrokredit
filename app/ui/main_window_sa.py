@@ -57,8 +57,50 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Микрокредиты - Органайзер")
         self.setGeometry(100, 100, 1400, 800)
         
+        self._setup_global_styles()
         self._setup_ui()
         self._refresh_data()
+
+    def _setup_global_styles(self):
+        """Настройка глобальных стилей приложения."""
+        # Устанавливаем стили для всего приложения
+        app_style = """
+        QMainWindow {
+            font-size: 14px;
+        }
+        QLabel {
+            font-size: 14px;
+        }
+        QPushButton {
+            font-size: 14px;
+            padding: 8px 12px;
+            min-height: 20px;
+        }
+        QLineEdit, QTextEdit, QDateEdit, QDoubleSpinBox {
+            font-size: 14px;
+            padding: 6px;
+            min-height: 20px;
+        }
+        QTableWidget {
+            font-size: 14px;
+        }
+        QTableWidget::item {
+            padding: 8px;
+            min-height: 25px;
+        }
+        QHeaderView::section {
+            font-size: 14px;
+            padding: 8px;
+            font-weight: bold;
+        }
+        QToolBar {
+            font-size: 14px;
+        }
+        QStatusBar {
+            font-size: 14px;
+        }
+        """
+        self.setStyleSheet(app_style)
 
     def _setup_ui(self):
         """Настройка пользовательского интерфейса."""
@@ -135,7 +177,7 @@ class MainWindow(QMainWindow):
         
         # Заголовок
         title_label = QLabel("Детали кредита")
-        title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin: 10px;")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px; padding: 5px;")
         layout.addWidget(title_label)
         
         # Скроллируемая область
@@ -307,11 +349,27 @@ class MainWindow(QMainWindow):
                 # Действие
                 if loan["is_paid"]:
                     action_button = QPushButton("Погашен")
-                    action_button.setStyleSheet("background-color: #28a745; color: white;")
+                    action_button.setStyleSheet("""
+                        background-color: #28a745; 
+                        color: white; 
+                        font-size: 12px;
+                        padding: 6px 12px;
+                        min-height: 20px;
+                        border: none;
+                        border-radius: 4px;
+                    """)
                     action_button.clicked.connect(lambda checked, url=loan["website"]: self._open_payment_site(url))
                 else:
                     action_button = QPushButton("Оплатить")
-                    action_button.setStyleSheet("background-color: #007bff; color: white;")
+                    action_button.setStyleSheet("""
+                        background-color: #007bff; 
+                        color: white; 
+                        font-size: 12px;
+                        padding: 6px 12px;
+                        min-height: 20px;
+                        border: none;
+                        border-radius: 4px;
+                    """)
                     action_button.clicked.connect(lambda checked, url=loan["website"]: self._open_payment_site(url))
                 
                 self.table.setCellWidget(row, 3, action_button)
@@ -496,13 +554,39 @@ class MainWindow(QMainWindow):
                 
                 # Действие
                 action_layout = QHBoxLayout()
+                action_layout.setContentsMargins(2, 2, 2, 2)
+                action_layout.setSpacing(4)
                 
                 toggle_button = QPushButton("Оплачен" if not inst["paid"] else "Не оплачен")
-                toggle_button.setStyleSheet("background-color: #28a745; color: white;" if not inst["paid"] else "background-color: #dc3545; color: white;")
+                toggle_button.setStyleSheet("""
+                    background-color: #28a745; 
+                    color: white; 
+                    font-size: 12px;
+                    padding: 4px 8px;
+                    min-height: 20px;
+                    border: none;
+                    border-radius: 3px;
+                """ if not inst["paid"] else """
+                    background-color: #dc3545; 
+                    color: white; 
+                    font-size: 12px;
+                    padding: 4px 8px;
+                    min-height: 20px;
+                    border: none;
+                    border-radius: 3px;
+                """)
                 toggle_button.clicked.connect(lambda checked, inst_id=inst["id"], current_paid=inst["paid"]: self._toggle_installment_paid(inst_id, not current_paid))
                 
                 delete_button = QPushButton("Удалить")
-                delete_button.setStyleSheet("background-color: #dc3545; color: white;")
+                delete_button.setStyleSheet("""
+                    background-color: #dc3545; 
+                    color: white; 
+                    font-size: 12px;
+                    padding: 4px 8px;
+                    min-height: 20px;
+                    border: none;
+                    border-radius: 3px;
+                """)
                 delete_button.clicked.connect(lambda checked, inst_id=inst["id"]: self._delete_installment(inst_id))
                 
                 action_layout.addWidget(toggle_button)

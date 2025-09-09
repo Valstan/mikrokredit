@@ -18,7 +18,7 @@ class SplashScreen(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Микрокредиты - Загрузка")
-        self.setFixedSize(500, 300)
+        self.setFixedSize(550, 350)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
@@ -56,8 +56,8 @@ class SplashScreen(QWidget):
         
         # Внутренний layout
         inner_layout = QVBoxLayout(main_frame)
-        inner_layout.setContentsMargins(30, 30, 30, 30)
-        inner_layout.setSpacing(20)
+        inner_layout.setContentsMargins(40, 40, 40, 40)
+        inner_layout.setSpacing(25)
         
         # Иконка и заголовок
         icon_label = QLabel("💰")
@@ -65,7 +65,8 @@ class SplashScreen(QWidget):
         icon_label.setStyleSheet("""
             QLabel {
                 font-size: 48px;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
+                padding: 5px;
             }
         """)
         inner_layout.addWidget(icon_label)
@@ -75,10 +76,11 @@ class SplashScreen(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
-                font-size: 24px;
+                font-size: 26px;
                 font-weight: bold;
                 color: #495057;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
+                padding: 5px;
             }
         """)
         inner_layout.addWidget(title_label)
@@ -88,9 +90,10 @@ class SplashScreen(QWidget):
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle_label.setStyleSheet("""
             QLabel {
-                font-size: 14px;
+                font-size: 16px;
                 color: #6c757d;
-                margin-bottom: 20px;
+                margin-bottom: 25px;
+                padding: 5px;
             }
         """)
         inner_layout.addWidget(subtitle_label)
@@ -105,8 +108,10 @@ class SplashScreen(QWidget):
                 border-radius: 8px;
                 text-align: center;
                 font-weight: bold;
-                height: 25px;
+                font-size: 14px;
+                height: 30px;
                 background-color: #f8f9fa;
+                padding: 5px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -121,9 +126,10 @@ class SplashScreen(QWidget):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             QLabel {
-                font-size: 12px;
+                font-size: 14px;
                 color: #495057;
-                margin-top: 10px;
+                margin-top: 15px;
+                padding: 5px;
             }
         """)
         inner_layout.addWidget(self.status_label)
@@ -133,9 +139,10 @@ class SplashScreen(QWidget):
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("""
             QLabel {
-                font-size: 10px;
+                font-size: 12px;
                 color: #adb5bd;
-                margin-top: 10px;
+                margin-top: 15px;
+                padding: 5px;
             }
         """)
         inner_layout.addWidget(version_label)
