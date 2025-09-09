@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 from typing import Generator
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -13,6 +14,7 @@ engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=conne
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
+@contextmanager
 def get_session() -> Generator[Session, None, None]:
     session = SessionLocal()
     try:
