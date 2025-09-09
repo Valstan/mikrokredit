@@ -64,6 +64,8 @@ def index():
                 "urgent": urgent,
             })
         enriched.sort(key=lambda x: ("9999-12-31" if x["next_date"] is None else x["next_date"], x["loan"].id or 0))
+        # Debug info
+        print(f"DEBUG: urgent_count={urgent_count}, total_count={len(loans)}, total_remaining={total_remaining}")
         return render_template("index.html", items=enriched, q=q, urgent_count=urgent_count, total_count=len(loans), total_remaining=total_remaining)
 
 
