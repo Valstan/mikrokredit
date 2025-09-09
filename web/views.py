@@ -18,7 +18,7 @@ def healthz():
 @bp.route("/")
 def index():
     q = (request.args.get("q", "") or "").strip().lower()
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:  # type: Session
         loans = session.execute(select(LoanORM)).scalars().all()
         if q:
             loans = [l for l in loans if q in (l.org_name or "").lower() or q in (l.website or "").lower() or q in (l.notes or "").lower()]
@@ -71,7 +71,7 @@ def loan_edit(loan_id: int | None = None):
         if due_date < loan_date:
             flash("Дата возврата не может быть раньше даты оформления", "error")
             return redirect(request.url)
-        with next(get_session()) as session:  # type: Session
+        with get_session() as session:  # type: Session
             if loan_id is None:
                 loan = LoanORM(
                     website=website,
@@ -108,7 +108,7 @@ def loan_edit(loan_id: int | None = None):
         return redirect(url_for("views.loan_edit", loan_id=loan_id))
 
     # GET
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:  # type: Session
         loan = session.get(LoanORM, loan_id) if loan_id is not None else None
         insts = []
         remaining = 0.0
@@ -141,7 +141,7 @@ def add_inst(loan_id: int):
     if amount <= 0:
         flash("Сумма должна быть больше нуля", "error")
         return redirect(url_for("views.loan_edit", loan_id=loan_id))
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:  # type: Session
         loan = session.get(LoanORM, loan_id)
         if loan is None:
             flash("Кредит не найден", "error")
@@ -170,7 +170,7 @@ def edit_inst(loan_id: int, inst_id: int):
     if amount <= 0:
         flash("Сумма должна быть больше нуля", "error")
         return redirect(url_for("views.loan_edit", loan_id=loan_id))
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:  # type: Session
         loan = session.get(LoanORM, loan_id)
         if loan is None:
             flash("Кредит не найден", "error")
@@ -196,7 +196,7 @@ def edit_inst(loan_id: int, inst_id: int):
 @bp.post("/loan/<int:loan_id>/installments/<int:inst_id>/toggle")
 def toggle_inst(loan_id: int, inst_id: int):
     action = request.form.get("action", "toggle")
-    with next(get_session()) as session:  # type: Session
+    with get_session() as session:  # type: Session
         loan = session.get(LoanORM, loan_id)
         if loan is None:
             flash("Кредит не найден", "error")
