@@ -1,6 +1,6 @@
 from __future__ import annotations
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Text, Float, Boolean, ForeignKey
+from sqlalchemy import Integer, String, Text, Float, Boolean, ForeignKey, Sequence
 from typing import List, Optional
 
 
@@ -11,7 +11,7 @@ class Base(DeclarativeBase):
 class LoanORM(Base):
     __tablename__ = "loans"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, Sequence('loans_id_seq'), primary_key=True, autoincrement=True)
     website: Mapped[str] = mapped_column(String, nullable=False)
     loan_date: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD
     amount_borrowed: Mapped[float] = mapped_column(Float, nullable=False)
@@ -33,7 +33,7 @@ class LoanORM(Base):
 class InstallmentORM(Base):
     __tablename__ = "installments"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, Sequence('installments_id_seq'), primary_key=True, autoincrement=True)
     loan_id: Mapped[int] = mapped_column(ForeignKey("loans.id", ondelete="CASCADE"), nullable=False)
     due_date: Mapped[str] = mapped_column(String, nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
