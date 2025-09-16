@@ -73,81 +73,99 @@ def index():
 @bp.route("/loan/<int:loan_id>", methods=["GET", "POST"])
 def loan_edit(loan_id: int | None = None):
     if request.method == "POST":
-        org_name = request.form.get("org_name", "").strip()
-        website = request.form.get("website", "").strip()
-        loan_date = request.form.get("loan_date", "")
-        due_date = request.form.get("due_date", "")
-        amount_borrowed = float(request.form.get("amount_borrowed", 0) or 0)
-        notes = request.form.get("notes", "")
-        payment_methods = request.form.get("payment_methods", "")
-        risky_org = 1 if request.form.get("risky_org") == "on" else 0
-        if not org_name or not website:
-            flash("Укажите название организации и сайт", "error")
+        try:
+            org_name = request.form.get("org_name", "").strip()
+            website = request.form.get("website", "").strip()
+            loan_date = request.form.get("loan_date", "")
+            due_date = request.form.get("due_date", "")
+            amount_borrowed = float(request.form.get("amount_borrowed", 0) or 0)
+            notes = request.form.get("notes", "")
+            payment_methods = request.form.get("payment_methods", "")
+            risky_org = 1 if request.form.get("risky_org") == "on" else 0
+            
+            print(f"DEBUG: Creating loan - org_name={org_name}, website={website}, loan_date={loan_date}, due_date={due_date}")
+            
+            if not org_name or not website:
+                flash("Укажите название организации и сайт", "error")
+                return redirect(request.url)
+            if due_date < loan_date:
+                flash("Дата возврата не может быть раньше даты оформления", "error")
+                return redirect(request.url)
+            
+            with get_session() as session:
+                if loan_id is None:
+                    loan = LoanORM(
+                        website=website,
+                        loan_date=loan_date,
+                        amount_borrowed=amount_borrowed,
+                        amount_due=0.0,
+                        due_date=due_date,
+                        risky_org=int(risky_org),
+                        notes=notes,
+                        payment_methods=payment_methods,
+                        reminded_pre_due=0,
+                        created_at=date.today().isoformat(),
+                        is_paid=0,
+                        org_name=org_name,
+                    )
+                    session.add(loan)
+                    session.commit()
+                    loan_id = loan.id
+                    print(f"DEBUG: Created loan with ID {loan_id}")
+                    flash("Кредит создан", "success")
+                else:
+                    loan = session.get(LoanORM, loan_id)
+                    if loan is None:
+                        flash("Кредит не найден", "error")
+                        return redirect(url_for("views.index"))
+                    loan.website = website
+                    loan.loan_date = loan_date
+                    loan.amount_borrowed = amount_borrowed
+                    loan.due_date = due_date
+                    loan.risky_org = int(risky_org)
+                    loan.notes = notes
+                    loan.payment_methods = payment_methods
+                    loan.org_name = org_name
+                    flash("Сохранено", "success")
+            
+            print(f"DEBUG: Redirecting to loan_edit with loan_id={loan_id}")
+            return redirect(url_for("views.loan_edit", loan_id=loan_id))
+            
+        except Exception as e:
+            print(f"ERROR in loan_edit POST: {e}")
+            flash(f"Ошибка при сохранении: {str(e)}", "error")
             return redirect(request.url)
-        if due_date < loan_date:
-            flash("Дата возврата не может быть раньше даты оформления", "error")
-            return redirect(request.url)
-        with get_session() as session:
-            if loan_id is None:
-                loan = LoanORM(
-                    website=website,
-                    loan_date=loan_date,
-                    amount_borrowed=amount_borrowed,
-                    amount_due=0.0,
-                    due_date=due_date,
-                    risky_org=int(risky_org),
-                    notes=notes,
-                    payment_methods=payment_methods,
-                    reminded_pre_due=0,
-                    created_at=date.today().isoformat(),
-                    is_paid=0,
-                    org_name=org_name,
-                )
-                session.add(loan)
-                session.flush()
-                loan_id = loan.id
-                flash("Кредит создан", "success")
-            else:
-                loan = session.get(LoanORM, loan_id)
-                if loan is None:
-                    flash("Кредит не найден", "error")
-                    return redirect(url_for("views.index"))
-                loan.website = website
-                loan.loan_date = loan_date
-                loan.amount_borrowed = amount_borrowed
-                loan.due_date = due_date
-                loan.risky_org = int(risky_org)
-                loan.notes = notes
-                loan.payment_methods = payment_methods
-                loan.org_name = org_name
-                flash("Сохранено", "success")
-        return redirect(url_for("views.loan_edit", loan_id=loan_id))
 
     # GET
-    with get_session() as session:
-        loan = session.get(LoanORM, loan_id) if loan_id is not None else None
-        insts = []
-        remaining = 0.0
-        total_due = 0.0
-        last_date = None
-        if loan is not None:
-            insts = session.execute(
-                select(InstallmentORM).where(InstallmentORM.loan_id == loan.id).order_by(
-                    InstallmentORM.due_date.asc(), InstallmentORM.id.asc()
-                )
-            ).scalars().all()
-            remaining = session.execute(
-                select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(
-                    InstallmentORM.loan_id == loan.id, InstallmentORM.paid == 0
-                )
-            ).scalar_one()
-            total_due = session.execute(
-                select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == loan.id)
-            ).scalar_one()
-            last_date = session.execute(
-                select(func.max(InstallmentORM.due_date)).where(InstallmentORM.loan_id == loan.id)
-            ).scalar_one()
-        return render_template("loan_edit.html", loan=loan, installments=insts, remaining=remaining, total_due=total_due, last_date=last_date)
+    try:
+        with get_session() as session:
+            loan = session.get(LoanORM, loan_id) if loan_id is not None else None
+            insts = []
+            remaining = 0.0
+            total_due = 0.0
+            last_date = None
+            if loan is not None:
+                insts = session.execute(
+                    select(InstallmentORM).where(InstallmentORM.loan_id == loan.id).order_by(
+                        InstallmentORM.due_date.asc(), InstallmentORM.id.asc()
+                    )
+                ).scalars().all()
+                remaining = session.execute(
+                    select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(
+                        InstallmentORM.loan_id == loan.id, InstallmentORM.paid == 0
+                    )
+                ).scalar_one()
+                total_due = session.execute(
+                    select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(InstallmentORM.loan_id == loan.id)
+                ).scalar_one()
+                last_date = session.execute(
+                    select(func.max(InstallmentORM.due_date)).where(InstallmentORM.loan_id == loan.id)
+                ).scalar_one()
+            return render_template("loan_edit.html", loan=loan, installments=insts, remaining=remaining, total_due=total_due, last_date=last_date)
+    except Exception as e:
+        print(f"ERROR in loan_edit GET: {e}")
+        flash(f"Ошибка при загрузке: {str(e)}", "error")
+        return redirect(url_for("views.index"))
 
 
 @bp.post("/loan/<int:loan_id>/installments/add")
