@@ -5,16 +5,25 @@
 import os
 from pathlib import Path
 
-# База данных по умолчанию - PostgreSQL на Render
-DEFAULT_DATABASE_URL = "postgresql://mikrokredit_user:6xoKkR0wfL1Zc0YcmqcE4GSjBSXlQ8Rv@dpg-d308623e5dus73dfrrsg-a.oregon-postgres.render.com/mikrokredit"
+# База данных по умолчанию - PostgreSQL на сервере
+DEFAULT_DATABASE_URL = "postgresql://mikrokredit_user:mikrokredit_pass@localhost:5432/mikrokredit"
 
 # Получаем URL базы данных из переменной окружения или используем по умолчанию
 DATABASE_URL = os.environ.get("MIKROKREDIT_DATABASE_URL", DEFAULT_DATABASE_URL)
 
-# Если нужно использовать локальную SQLite базу (для отладки)
-USE_LOCAL_SQLITE = os.environ.get("MIKROKREDIT_USE_LOCAL", "").lower() in ("1", "true", "yes")
+# Redis конфигурация для кэширования и очередей
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 
-if USE_LOCAL_SQLITE:
+# API Gateway для межпроектного взаимодействия
+API_GATEWAY_URL = os.environ.get("API_GATEWAY_URL", "http://localhost:8000")
+
+# Название проекта для идентификации в общей сети
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "mikrokredit")
+
+# Если нужно использовать SQLite (для отладки)
+USE_SQLITE = os.environ.get("MIKROKREDIT_USE_SQLITE", "").lower() in ("1", "true", "yes")
+
+if USE_SQLITE:
     # Используем локальную SQLite базу
     local_db_path = Path(__file__).parent.parent / "mikrokredit.db"
     DATABASE_URL = f"sqlite:///{local_db_path.absolute()}"

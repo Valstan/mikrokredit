@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 import json
 
+from app.integration import cache_manager, api_gateway_client
 from app.db_sa import get_session
 from app.models_sa import LoanORM, InstallmentORM
 
@@ -19,6 +20,14 @@ def healthz():
 @bp.route("/")
 def index():
     q = (request.args.get("q", "") or "").strip().lower()
+    
+    # Try to get cached data first
+    cache_key = f"loans_data_{hash(q)}"
+    cached_data = cache_manager.get_cached_loans_data()
+    
+    if cached_data and not q:  # Use cache only for main page without search
+        return render_template("index.html", **cached_data)
+    
     with get_session() as session:
         loans = session.execute(select(LoanORM)).scalars().all()
         if q:
@@ -65,12 +74,27 @@ def index():
                 "urgent": urgent,
             })
         enriched.sort(key=lambda x: ("9999-12-31" if x["next_date"] is None else x["next_date"], x["loan"].id or 0))
+        
+        # Cache the result if no search query
+        if not q:
+            cache_data = {
+                "items": enriched,
+                "q": q,
+                "urgent_count": urgent_count,
+                "total_count": len(loans),
+                "total_remaining": total_remaining
+            }
+            cache_manager.cache_loans_data(cache_data)
+        
         # Debug info
         print(f"DEBUG: urgent_count={urgent_count}, total_count={len(loans)}, total_remaining={total_remaining}")
         return render_template("index.html", items=enriched, q=q, urgent_count=urgent_count, total_count=len(loans), total_remaining=total_remaining)
 
 
 @bp.route("/loan/new", methods=["GET", "POST"])
+def loan_new():
+    return loan_edit(None)
+
 @bp.route("/loan/<int:loan_id>", methods=["GET", "POST"])
 def loan_edit(loan_id: int | None = None):
     if request.method == "POST":
@@ -113,6 +137,10 @@ def loan_edit(loan_id: int | None = None):
                     session.commit()
                     loan_id = loan.id
                     print(f"DEBUG: Created loan with ID {loan_id}")
+                    
+                    # Clear cache after data change
+                    cache_manager.delete("loans_data")
+                    
                     flash("Кредит создан", "success")
                 else:
                     loan = session.get(LoanORM, loan_id)

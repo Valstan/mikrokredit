@@ -3,8 +3,15 @@ from flask import Flask
 
 
 def create_app() -> Flask:
-    app = Flask(__name__)
+    import os
+    template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+    app = Flask(__name__, template_folder=template_dir)
     app.config["SECRET_KEY"] = "dev"
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    
+    # Настройка для работы с reverse proxy
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1)
 
     # Ensure DB schema exists (Postgres/SQLite via DATABASE_URL)
     try:

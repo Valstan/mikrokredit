@@ -6,14 +6,14 @@ from sqlalchemy.orm import sessionmaker, Session
 
 # Импортируем конфигурацию
 try:
-    from .config import DATABASE_URL, USE_LOCAL_SQLITE
+    from .config import DATABASE_URL, USE_SQLITE
 except ImportError:
     # Fallback для случаев, когда config.py недоступен
     DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{os.path.abspath(os.environ.get('MIKROKREDIT_DB', 'mikrokredit.db'))}"
-    USE_LOCAL_SQLITE = False
+    USE_SQLITE = False
 
 print(f"DEBUG: DATABASE_URL = {DATABASE_URL}")
-print(f"DEBUG: USE_LOCAL_SQLITE = {USE_LOCAL_SQLITE}")
+print(f"DEBUG: USE_SQLITE = {USE_SQLITE}")
 
 # SQLite needs check_same_thread=False for use across threads
 # For PostgreSQL, use psycopg2 driver

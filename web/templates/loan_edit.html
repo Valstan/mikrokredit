@@ -57,7 +57,7 @@
 </form>
 
 {% if loan %}
-<form id="delete-form" method="post" action="{{ url_for('views.delete_loan_route', loan_id=loan.id) }}"></form>
+<form id="delete-form" method="post" action="/loan/{{ loan.id }}/delete" hx-post="/loan/{{ loan.id }}/delete" hx-target="main" hx-push-url="true"></form>
 {% endif %}
 
 {% if not loan %}
@@ -67,7 +67,7 @@
 {% if loan %}
 <hr>
 <h5>График платежей</h5>
-<form class="row g-2" method="post" action="{{ url_for('views.add_inst', loan_id=loan.id) }}">
+<form class="row g-2" method="post" action="/loan/{{ loan.id }}/installments/add" hx-post="/loan/{{ loan.id }}/installments/add" hx-target="main">
   <div class="col-md-4">
     <input type="date" name="due_date" class="form-control" required>
   </div>
@@ -98,16 +98,16 @@
       <td>{{ 'Да' if inst.paid else 'Нет' }}</td>
       <td>{{ inst.paid_date or '' }}</td>
       <td>
-        <form method="post" action="{{ url_for('views.edit_inst', loan_id=loan.id, inst_id=inst.id) }}" class="d-inline">
+        <form method="post" action="/loan/{{ loan.id }}/installments/{{ inst.id }}/edit" hx-post="/loan/{{ loan.id }}/installments/{{ inst.id }}/edit" hx-target="main" class="d-inline">
           <input type="date" name="due_date" value="{{ inst.due_date }}" class="form-control form-control-sm d-inline-block" style="width: 170px;">
           <input type="number" step="0.01" name="amount" value="{{ '%.2f'|format(inst.amount) }}" class="form-control form-control-sm d-inline-block text-end" style="width: 130px;">
           <button class="btn btn-sm btn-outline-success" type="submit">Изменить</button>
         </form>
-        <form method="post" action="{{ url_for('views.toggle_inst', loan_id=loan.id, inst_id=inst.id) }}" class="d-inline">
+        <form method="post" action="/loan/{{ loan.id }}/installments/{{ inst.id }}/toggle" hx-post="/loan/{{ loan.id }}/installments/{{ inst.id }}/toggle" hx-target="main" class="d-inline">
           <input type="hidden" name="paid" value="{{ 0 if inst.paid else 1 }}">
           <button class="btn btn-sm btn-outline-primary" type="submit">{{ 'Сделать не оплачен' if inst.paid else 'Оплачен' }}</button>
         </form>
-        <form method="post" action="{{ url_for('views.toggle_inst', loan_id=loan.id, inst_id=inst.id) }}" class="d-inline" onsubmit="return confirm('Удалить платеж?')">
+        <form method="post" action="/loan/{{ loan.id }}/installments/{{ inst.id }}/toggle" hx-post="/loan/{{ loan.id }}/installments/{{ inst.id }}/toggle" hx-target="main" class="d-inline" x-on:submit="confirmDelete('Удалить платеж?')">
           <input type="hidden" name="action" value="delete">
           <button class="btn btn-sm btn-outline-danger" type="submit">Удалить</button>
         </form>
