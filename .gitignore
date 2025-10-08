@@ -31,3 +31,19 @@ Thumbs.db
 
 # Local DB (keep if you prefer, but usually not needed in VCS)
 /mikrokredit.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Server files
+*.pid
+logs/
+*.sql
+*.sql.gz
+*.tar.gz
+*.backup
+
+# System configuration (specific to server)
+nginx.conf
+mikrokredit.service
+gunicorn.conf.py
