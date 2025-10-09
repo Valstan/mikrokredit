@@ -17,8 +17,8 @@ max_requests = 1000
 max_requests_jitter = 50
 
 # Logging
-accesslog = "/home/valstan/development/mikrokredit/logs/access.log"
-errorlog = "/home/valstan/development/mikrokredit/logs/error.log"
+accesslog = "/home/valstan/mikrokredit/logs/access.log"
+errorlog = "/home/valstan/mikrokredit/logs/error.log"
 loglevel = "info"
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
@@ -27,7 +27,7 @@ proc_name = "mikrokredit"
 
 # Server mechanics
 daemon = False
-pidfile = "/home/valstan/development/mikrokredit/mikrokredit.pid"
+pidfile = "/home/valstan/mikrokredit/mikrokredit.pid"
 tmp_upload_dir = None
 
 # SSL (if needed)
@@ -36,7 +36,7 @@ tmp_upload_dir = None
 
 # Environment variables
 raw_env = [
-    'MIKROKREDIT_USE_SQLITE=1',
+    # 'MIKROKREDIT_USE_SQLITE=1',  # Disabled - using PostgreSQL
 ]
 
 # Preload app

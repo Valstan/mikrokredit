@@ -16,7 +16,7 @@ print(f"DEBUG: DATABASE_URL = {DATABASE_URL}")
 print(f"DEBUG: USE_SQLITE = {USE_SQLITE}")
 
 # SQLite needs check_same_thread=False for use across threads
-# For PostgreSQL, use psycopg2 driver
+# For PostgreSQL, use psycopg2 driver with connection pooling
 if DATABASE_URL.startswith("sqlite:"):
     print("DEBUG: Using SQLite database")
     connect_args = {"check_same_thread": False}
@@ -24,7 +24,16 @@ if DATABASE_URL.startswith("sqlite:"):
 else:
     print("DEBUG: Using PostgreSQL database")
     try:
-        engine = create_engine(DATABASE_URL, echo=False, future=True)
+        # Настройки для PostgreSQL с улучшенным управлением подключениями
+        engine = create_engine(
+            DATABASE_URL,
+            echo=False,
+            future=True,
+            pool_size=10,  # Размер пула подключений
+            max_overflow=20,  # Дополнительные подключения при нагрузке
+            pool_pre_ping=True,  # Проверка подключения перед использованием
+            pool_recycle=3600,  # Переиспользование подключений каждый час
+        )
         print("DEBUG: Engine created successfully")
     except Exception as e:
         print(f"DEBUG: Error creating engine: {e}")

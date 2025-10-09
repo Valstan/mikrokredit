@@ -6,16 +6,11 @@
       | Горящие: {{ urgent_count or 0 }} | Всего: {{ total_count or 0 }} | Не оплачено всего: {{ '%.2f'|format(total_remaining or 0) }}
     </small>
   </h4>
+  <a href="{{ url_for('views.loan_new') }}" class="btn btn-success">
+    <i class="bi bi-plus-lg"></i> Добавить займ
+  </a>
 </div>
-<form class="row g-2 mb-3" method="get" action="/">
-  <div class="col-md-6">
-    <input class="form-control" type="search" placeholder="Поиск по сайту/банку/заметкам" name="q" value="{{ q or '' }}">
-  </div>
-  <div class="col-md-6">
-    <button class="btn btn-outline-secondary" type="submit">Фильтр</button>
-    {% if q %}<a class="btn btn-outline-dark" href="/">Сбросить</a>{% endif %}
-  </div>
-</form>
+
 <div class="table-responsive">
 <table class="table table-striped align-middle">
   <thead>

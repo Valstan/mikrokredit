@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 import json
 
 from app.integration import cache_manager, api_gateway_client
+from app.auth import login_required
 from app.db_sa import get_session
-from app.models_sa import LoanORM, InstallmentORM
+from app.models_sa import LoanORM, InstallmentORM, TaskORM
 
 bp = Blueprint("views", __name__)
 
@@ -18,7 +19,129 @@ def healthz():
 
 
 @bp.route("/")
-def index():
+@login_required
+def dashboard():
+    """Главная страница - Dashboard"""
+    with get_session() as session:
+        # Используем ТУ ЖЕ логику что и в разделе займов
+        loans = session.execute(select(LoanORM)).scalars().all()
+        today = date.today()
+        total_remaining = 0.0
+        urgent_count = 0
+        urgent_loans = []
+        
+        for l in loans:
+            # Вычисляем сумму неоплаченных платежей из installments
+            unpaid_total = session.execute(
+                select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(
+                    InstallmentORM.loan_id == l.id, InstallmentORM.paid == 0
+                )
+            ).scalar_one()
+            
+            # Определяем оплачен ли займ (по installments)
+            derived_paid = unpaid_total == 0
+            
+            # Находим ближайший неоплаченный платёж
+            next_row = None if derived_paid else session.execute(
+                select(InstallmentORM).where(InstallmentORM.loan_id == l.id, InstallmentORM.paid == 0)
+                .order_by(InstallmentORM.due_date.asc(), InstallmentORM.id.asc())
+                .limit(1)
+            ).scalar_one_or_none()
+            
+            next_date = (next_row.due_date if next_row else None)
+            
+            # Вычисляем дни до следующего платежа
+            try:
+                days_left = None if next_date is None else (date.fromisoformat(next_date) - today).days
+            except Exception:
+                days_left = None
+            
+            # Критерий "горящий" - как в оригинале
+            urgent = (days_left is not None) and (days_left < 5)
+            
+            # Суммируем общий долг
+            if not derived_paid:
+                total_remaining += float(unpaid_total or 0.0)
+            
+            # Считаем горящие
+            if urgent and not derived_paid:
+                urgent_count += 1
+                urgent_loans.append({
+                    'id': l.id,
+                    'org_name': l.org_name,
+                    'amount_due': unpaid_total,
+                    'next_date': next_date,
+                    'days_left': days_left
+                })
+        
+        # Статистика по займам (как в оригинале)
+        loans_stats = {
+            'total': len(loans),
+            'unpaid': sum(1 for l in loans if session.execute(
+                select(func.coalesce(func.sum(InstallmentORM.amount), 0.0)).where(
+                    InstallmentORM.loan_id == l.id, InstallmentORM.paid == 0
+                )
+            ).scalar_one() > 0),
+            'total_debt': total_remaining,
+            'urgent_count': urgent_count
+        }
+        
+        # Сортируем горящие по дням
+        urgent_loans.sort(key=lambda x: x['days_left'])
+        
+        # Статистика по задачам
+        tasks_stats = {
+            'total': session.execute(select(func.count(TaskORM.id))).scalar() or 0,
+            'pending': session.execute(select(func.count(TaskORM.id)).where(TaskORM.status == 0)).scalar() or 0,
+            'today': session.execute(
+                select(func.count(TaskORM.id))
+                .where(
+                    TaskORM.due_date.like(f'{today.isoformat()}%'),
+                    TaskORM.status == 0
+                )
+            ).scalar() or 0,
+            'overdue': session.execute(
+                select(func.count(TaskORM.id))
+                .where(
+                    TaskORM.due_date < datetime.now().isoformat(),
+                    TaskORM.status == 0
+                )
+            ).scalar() or 0
+        }
+        
+        # Задачи на сегодня
+        today_tasks = session.execute(
+            select(TaskORM)
+            .where(
+                TaskORM.due_date.like(f'{today.isoformat()}%'),
+                TaskORM.status == 0
+            )
+            .order_by(TaskORM.importance.asc())
+            .limit(5)
+        ).scalars().all()
+        
+        today_tasks_data = [
+            {
+                'id': t.id,
+                'title': t.title,
+                'importance': t.importance,
+                'due_date': t.due_date
+            }
+            for t in today_tasks
+        ]
+        
+    return render_template(
+        'dashboard.html',
+        loans_stats=loans_stats,
+        urgent_loans=urgent_loans,
+        tasks_stats=tasks_stats,
+        today_tasks=today_tasks_data
+    )
+
+
+@bp.route("/loans")
+@login_required
+def loans_index():
     q = (request.args.get("q", "") or "").strip().lower()
     
     # Try to get cached data first
@@ -92,10 +215,12 @@ def index():
 
 
 @bp.route("/loan/new", methods=["GET", "POST"])
+@login_required
 def loan_new():
     return loan_edit(None)
 
 @bp.route("/loan/<int:loan_id>", methods=["GET", "POST"])
+@login_required
 def loan_edit(loan_id: int | None = None):
     if request.method == "POST":
         try:
@@ -198,6 +323,7 @@ def loan_edit(loan_id: int | None = None):
 
 
 @bp.post("/loan/<int:loan_id>/installments/add")
+@login_required
 def add_inst(loan_id: int):
     due_date = request.form.get("due_date", "")
     amount = float(request.form.get("amount", 0) or 0)
@@ -227,6 +353,7 @@ def add_inst(loan_id: int):
 
 
 @bp.post("/loan/<int:loan_id>/installments/<int:inst_id>/edit")
+@login_required
 def edit_inst(loan_id: int, inst_id: int):
     due_date = request.form.get("due_date", "")
     amount = float(request.form.get("amount", 0) or 0)
@@ -257,6 +384,7 @@ def edit_inst(loan_id: int, inst_id: int):
     return redirect(url_for("views.loan_edit", loan_id=loan_id))
 
 @bp.post("/loan/<int:loan_id>/installments/<int:inst_id>/toggle")
+@login_required
 def toggle_inst(loan_id: int, inst_id: int):
     action = request.form.get("action", "toggle")
     with get_session() as session:
@@ -291,10 +419,12 @@ def toggle_inst(loan_id: int, inst_id: int):
 
 
 @bp.post("/loan/<int:loan_id>/delete")
+@login_required
 def delete_loan_route(loan_id: int):
     with get_session() as session:
         loan = session.get(LoanORM, loan_id)
         if loan:
             session.delete(loan)
+            session.commit()
     flash("Кредит удален", "success")
-    return redirect(url_for("views.index"))
+    return redirect(url_for("views.loans_index"))

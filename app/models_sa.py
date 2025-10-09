@@ -42,3 +42,105 @@ class InstallmentORM(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False)
 
     loan: Mapped[LoanORM] = relationship(back_populates="installments")
+
+
+# ==================== ОРГАНАЙЗЕР ЗАДАЧ ====================
+
+class TaskCategoryORM(Base):
+    """Категории задач"""
+    __tablename__ = "task_categories"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('task_categories_id_seq'), primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    color: Mapped[str] = mapped_column(String(20), default="#3498db")
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    tasks: Mapped[List["TaskORM"]] = relationship(back_populates="category", cascade="all, delete-orphan")
+
+
+class TaskORM(Base):
+    """Задачи"""
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('tasks_id_seq'), primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Статус: 0 = Не выполнено, 1 = Выполнено
+    status: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Важность: 1 = Важная, 2 = Нужная, 3 = Хотелось бы
+    importance: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    
+    # Даты
+    due_date: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # YYYY-MM-DD HH:MM
+    completed_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Категория
+    category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("task_categories.id", ondelete="SET NULL"), nullable=True)
+    
+    # Повтор задачи
+    is_recurring: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    recurrence_rule: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # JSON с правилами повтора
+    
+    category: Mapped[Optional[TaskCategoryORM]] = relationship(back_populates="tasks")
+    reminders: Mapped[List["TaskReminderORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+    subtasks: Mapped[List["SubtaskORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+
+
+class SubtaskORM(Base):
+    """Подзадачи"""
+    __tablename__ = "subtasks"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('subtasks_id_seq'), primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    completed: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    task: Mapped[TaskORM] = relationship(back_populates="subtasks")
+
+
+class TaskReminderORM(Base):
+    """Напоминания для задач"""
+    __tablename__ = "task_reminders"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('task_reminders_id_seq'), primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    
+    # Время напоминания
+    reminder_time: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD HH:MM:SS
+    
+    # Отправлено ли
+    sent: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    sent_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # ID сообщения в Telegram (для callback)
+    telegram_message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Пользователь отреагировал на напоминание
+    acknowledged: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    acknowledged_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    task: Mapped[TaskORM] = relationship(back_populates="reminders")
+
+
+class ReminderTemplateORM(Base):
+    """Шаблоны напоминаний"""
+    __tablename__ = "reminder_templates"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('reminder_templates_id_seq'), primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # JSON с правилами: {"type": "before", "intervals": [1440, 60, 0]} - за 1 день, 1 час, в момент
+    rules: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    is_system: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)  # Системный шаблон
+    created_at: Mapped[str] = mapped_column(String, nullable=False)

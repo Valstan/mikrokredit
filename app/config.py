@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 # База данных по умолчанию - PostgreSQL на сервере
-DEFAULT_DATABASE_URL = "postgresql://mikrokredit_user:mikrokredit_pass@localhost:5432/mikrokredit"
+DEFAULT_DATABASE_URL = "postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5432/mikrokredit"
 
 # Получаем URL базы данных из переменной окружения или используем по умолчанию
 DATABASE_URL = os.environ.get("MIKROKREDIT_DATABASE_URL", DEFAULT_DATABASE_URL)

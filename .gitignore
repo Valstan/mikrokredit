@@ -1,49 +1,55 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
+*.so
+.Python
 *.egg-info/
-.eggs/
+dist/
+build/
 
-# Virtualenv
+# Virtual Environment
 .venv/
 venv/
-env/
+ENV/
 
-# IDE/editor
-.idea/
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Build artifacts
-build/
-dist/
-*.spec
-
-# Caches
-.pytest_cache/
-.mypy_cache/
-
-# Logs & OS
+# Logs
+logs/*.log
 *.log
-.DS_Store
-Thumbs.db
+nohup.out
 
-# Local DB (keep if you prefer, but usually not needed in VCS)
-/mikrokredit.db
+# Database
 *.db
 *.sqlite
 *.sqlite3
 
-# Server files
-*.pid
-logs/
+# Backups
+backups/
 *.sql
 *.sql.gz
-*.tar.gz
-*.backup
 
-# System configuration (specific to server)
-nginx.conf
-mikrokredit.service
-gunicorn.conf.py
+# Secrets
+config_secure.py
+.env
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+mikrokredit.pid
+old/
+*.bak
+
+# Временные
+tmp/
+temp/

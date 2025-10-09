@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Задачи{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar с фильтрами -->
+    <div class="col-md-3 sidebar p-3">
+        <h5 class="mb-3">Фильтры</h5>
+        <ul class="nav nav-pills flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if filter_by == 'all' %}active{% endif %}" href="{{ url_for('tasks.index', filter='all') }}">
+                    <i class="bi bi-list-ul"></i> Все задачи ({{ stats.total }})
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if filter_by == 'today' %}active{% endif %}" href="{{ url_for('tasks.index', filter='today') }}">
+                    <i class="bi bi-calendar-day"></i> На сегодня ({{ stats.today }})
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if filter_by == 'overdue' %}active{% endif %}" href="{{ url_for('tasks.index', filter='overdue') }}">
+                    <i class="bi bi-exclamation-triangle text-danger"></i> Просроченные ({{ stats.overdue }})
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if filter_by == 'important' %}active{% endif %}" href="{{ url_for('tasks.index', filter='important') }}">
+                    <i class="bi bi-star-fill text-warning"></i> Важные
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if filter_by == 'completed' %}active{% endif %}" href="{{ url_for('tasks.index', filter='completed') }}">
+                    <i class="bi bi-check-circle"></i> Выполненные ({{ stats.total - stats.pending }})
+                </a>
+            </li>
+        </ul>
+        
+        {% if categories %}
+        <hr>
+        <h6 class="mb-2">Категории</h6>
+        <ul class="nav nav-pills flex-column">
+            {% for cat in categories %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('tasks.index', category=cat.id) }}">
+                    <span style="color: {{ cat.color }}">●</span> {{ cat.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        <hr>
+        <a href="{{ url_for('tasks.categories') }}" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-folder"></i> Управление категориями
+        </a>
+    </div>
+    
+    <!-- Список задач -->
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>
+                {% if filter_by == 'today' %}На сегодня
+                {% elif filter_by == 'overdue' %}Просроченные
+                {% elif filter_by == 'important' %}Важные
+                {% elif filter_by == 'completed' %}Выполненные
+                {% else %}Все задачи
+                {% endif %}
+            </h2>
+            <a href="{{ url_for('tasks.new') }}" class="btn btn-success">
+                <i class="bi bi-plus-lg"></i> Добавить задачу
+            </a>
+        </div>
+        
+        {% if not tasks %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Задач нет. <a href="{{ url_for('tasks.new') }}">Создайте первую задачу</a>
+        </div>
+        {% else %}
+        <div class="row">
+            {% for task in tasks %}
+            <div class="col-12 mb-3">
+                <div class="card task-card importance-{{ task.importance }}" onclick="window.location='{{ url_for('tasks.edit', task_id=task.id) }}'">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">
+                                    {% if task.status == 1 %}
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                        <del>{{ task.title }}</del>
+                                    {% else %}
+                                        <i class="bi bi-circle"></i>
+                                        {{ task.title }}
+                                    {% endif %}
+                                </h5>
+                                
+                                {% if task.description %}
+                                <p class="card-text text-muted small">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    <!-- Важность -->
+                                    {% if task.importance == 1 %}
+                                        <span class="badge bg-danger">Важная</span>
+                                    {% elif task.importance == 2 %}
+                                        <span class="badge bg-warning text-dark">Нужная</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Хотелось бы</span>
+                                    {% endif %}
+                                    
+                                    <!-- Категория -->
+                                    {% if task.category %}
+                                    <span class="badge" style="background-color: {{ task.category.color }}">
+                                        {{ task.category.name }}
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <!-- Дата -->
+                                    {% if task.due_date %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-calendar"></i> {{ task.due_date[:16] }}
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <!-- Подзадачи -->
+                                    {% if task.subtasks %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-list-check"></i> {{ task.subtasks|selectattr('completed')|list|length }}/{{ task.subtasks|length }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="btn-group" onclick="event.stopPropagation()">
+                                {% if task.status == 0 %}
+                                <form action="{{ url_for('tasks.complete', task_id=task.id) }}" method="POST" style="display:inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Выполнено">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form action="{{ url_for('tasks.delete', task_id=task.id) }}" method="POST" style="display:inline" onsubmit="return confirm('Удалить задачу?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

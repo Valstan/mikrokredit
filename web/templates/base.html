@@ -1,73 +1,98 @@
 <!doctype html>
 <html lang="ru">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MikroKredit Web</title>
+    <title>{% block title %}MikroKredit Manager{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- HTMX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <!-- HTMX Configuration -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        // Настройка HTMX для работы с префиксом
-        htmx.config.baseURL = '/mikrokredit';
-        htmx.config.defaultSwapStyle = 'innerHTML';
-        htmx.config.defaultSwapDelay = 100;
-      });
-    </script>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="/">MikroKredit</a>
-        <div>
-          <a class="btn btn-sm btn-success" href="/loan/new">Добавить</a>
-        </div>
-      </div>
-    </nav>
-    <main class="container mb-5" id="main-content" x-data="mikrokreditApp()">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category=='error' else category }}" x-show="showAlert" x-transition>{{ message }}</div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-      {% block content %}{% endblock %}
-    </main>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Alpine.js Components -->
-    <script>
-      function mikrokreditApp() {
-        return {
-          showAlert: true,
-          loading: false,
-          
-          init() {
-            // Автоматически скрываем алерты через 5 секунд
-            setTimeout(() => {
-              this.showAlert = false;
-            }, 5000);
-            
-            // Обработка HTMX событий
-            document.addEventListener('htmx:beforeRequest', () => {
-              this.loading = true;
-            });
-            
-            document.addEventListener('htmx:afterRequest', () => {
-              this.loading = false;
-            });
-          },
-          
-          confirmDelete(message) {
-            return confirm(message);
-          }
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-      }
-    </script>
-  </body>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-pills .nav-link.active {
+            background: var(--primary-gradient);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .importance-1 { border-left: 4px solid #dc3545; }
+        .importance-2 { border-left: 4px solid #ffc107; }
+        .importance-3 { border-left: 4px solid #6c757d; }
+        
+        .task-card { cursor: pointer; }
+        .task-card:hover { background: #f8f9fa; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('views.dashboard') }}">
+                <strong>Записная книжка Валентина</strong>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('views.dashboard') }}">
+                            <i class="bi bi-house"></i> Главная
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('views.loans_index') }}">
+                            <i class="bi bi-credit-card"></i> Займы
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('tasks.index') }}">
+                            <i class="bi bi-check2-square"></i> Задачи
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Выход
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash messages -->
+    <div class="container-fluid mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main content -->
+    <div class="container-fluid mt-3">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
 </html>

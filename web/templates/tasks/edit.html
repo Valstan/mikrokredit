@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Редактировать задачу{% else %}Новая задача{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    {% if task %}
+                        <i class="bi bi-pencil"></i> Редактировать задачу
+                    {% else %}
+                        <i class="bi bi-plus-circle"></i> Новая задача
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% if task %}{{ url_for('tasks.edit', task_id=task.id) }}{% else %}{{ url_for('tasks.new') }}{% endif %}">
+                    
+                    <!-- Название -->
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Название задачи *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{% if task %}{{ task.title }}{% endif %}" required>
+                    </div>
+                    
+                    <!-- Описание -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{% if task %}{{ task.description }}{% endif %}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Важность -->
+                        <div class="col-md-4 mb-3">
+                            <label for="importance" class="form-label">Важность *</label>
+                            <select class="form-select" id="importance" name="importance" required>
+                                <option value="1" {% if task and task.importance == 1 %}selected{% endif %}>🔴 Важная</option>
+                                <option value="2" {% if task and task.importance == 2 %}selected{% elif not task %}selected{% endif %}>🟡 Нужная</option>
+                                <option value="3" {% if task and task.importance == 3 %}selected{% endif %}>⚪ Хотелось бы</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Категория -->
+                        <div class="col-md-4 mb-3">
+                            <label for="category_id" class="form-label">Категория</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">Без категории</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if task and task.category_id == cat.id %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Дата и время -->
+                        <div class="col-md-4 mb-3">
+                            <label for="due_date" class="form-label">Срок выполнения</label>
+                            <input type="datetime-local" class="form-control" id="due_date" name="due_date" 
+                                   value="{% if task and task.due_date %}{{ task.due_date[:16] }}{% endif %}">
+                        </div>
+                    </div>
+                    
+                    <!-- Подзадачи -->
+                    <div class="mb-3">
+                        <label class="form-label">Подзадачи (чеклист)</label>
+                        <div id="subtasks-container">
+                            {% if task and task.subtasks %}
+                                {% for subtask in task.subtasks %}
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="subtask_title[]" 
+                                           value="{{ subtask.title }}" placeholder="Название подзадачи">
+                                    <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addSubtask()">
+                            <i class="bi bi-plus"></i> Добавить подзадачу
+                        </button>
+                    </div>
+                    
+                    <!-- Напоминания -->
+                    <div class="mb-3">
+                        <label class="form-label">Напоминания</label>
+                        
+                        <!-- Шаблоны напоминаний -->
+                        <div class="mb-2">
+                            <select class="form-select" id="reminder_template" name="reminder_template">
+                                <option value="">Выбрать шаблон...</option>
+                                {% for template in templates %}
+                                <option value="{{ template.id }}">{{ template.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Или добавьте свои напоминания ниже</small>
+                        </div>
+                        
+                        <!-- Кастомные напоминания -->
+                        <div id="reminders-container">
+                            {% if task and task.reminders %}
+                                {% for reminder in task.reminders %}
+                                <div class="input-group mb-2">
+                                    <input type="datetime-local" class="form-control" name="reminder_time[]" 
+                                           value="{{ reminder.reminder_time[:16] }}">
+                                    <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addReminder()">
+                            <i class="bi bi-plus"></i> Добавить напоминание
+                        </button>
+                    </div>
+                    
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('tasks.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-save"></i> Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addSubtask() {
+    const container = document.getElementById('subtasks-container');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="text" class="form-control" name="subtask_title[]" placeholder="Название подзадачи">
+        <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    container.appendChild(div);
+}
+
+function addReminder() {
+    const container = document.getElementById('reminders-container');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="datetime-local" class="form-control" name="reminder_time[]">
+        <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    container.appendChild(div);
+}
+</script>
+{% endblock %}
+

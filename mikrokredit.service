@@ -3,11 +3,11 @@ Description=MikroKredit Web Application
 After=network.target postgresql.service
 
 [Service]
-Type=simple
+Type=notify
 User=valstan
-WorkingDirectory=/home/valstan/development/mikrokredit
-Environment=MIKROKREDIT_DATABASE_URL=postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5434/mikrokredit_db
-ExecStart=/home/valstan/development/mikrokredit/.venv/bin/python -c "from web import create_app; app = create_app(); app.run(host='0.0.0.0', port=8002, debug=False)"
+WorkingDirectory=/home/valstan/mikrokredit
+Environment=MIKROKREDIT_DATABASE_URL=postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5432/mikrokredit
+ExecStart=/home/valstan/mikrokredit/.venv/bin/gunicorn --config /home/valstan/mikrokredit/gunicorn.conf.py web:create_app()
 Restart=always
 RestartSec=10
 
