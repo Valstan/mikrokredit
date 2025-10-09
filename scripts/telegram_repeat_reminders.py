@@ -12,7 +12,9 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Добавляем корень проекта в sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 from app.db_sa import get_session
 from app.models_sa import TaskORM, TaskReminderORM
