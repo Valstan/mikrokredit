@@ -54,7 +54,7 @@
   <tbody>
     {% for it in items %}
     {% set l = it.loan %}
-    <tr class="loan-row {{ 'loan-row-paid' if it.paid else ('loan-row-urgent' if it.urgent else ('loan-row-warning' if it.next_date else 'loan-row-neutral')) }}" 
+    <tr class="loan-row {{ 'loan-row-paid' if it.paid else ('loan-row-urgent' if it.urgent else ('loan-row-warning' if it.warning else 'loan-row-neutral')) }}" 
         onclick="window.location.href='/loan/{{ l.id }}/v2';">
       <td>{{ l.id }}</td>
       <td>{{ l.org_name }}</td>

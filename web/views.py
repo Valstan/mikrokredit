@@ -182,7 +182,12 @@ def loans_index():
                 days_left = None if next_date is None else (date.fromisoformat(next_date) - today).days
             except Exception:
                 days_left = None
-            urgent = (days_left is not None) and (days_left < 5)
+            
+            # Горящие: <= 2 дня до платежа (как в Telegram-боте)
+            # Предупреждение: <= 5 дней до платежа
+            urgent = (days_left is not None) and (days_left <= 2)
+            warning = (days_left is not None) and (days_left <= 5) and (days_left > 2)
+            
             if not derived_paid:
                 total_remaining += float(unpaid_total or 0.0)
             if urgent and not derived_paid:
@@ -195,6 +200,7 @@ def loans_index():
                 "last_date": last_date,
                 "paid": derived_paid,
                 "urgent": urgent,
+                "warning": warning,
             })
         enriched.sort(key=lambda x: ("9999-12-31" if x["next_date"] is None else x["next_date"], x["loan"].id or 0))
         
