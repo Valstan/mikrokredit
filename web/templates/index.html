@@ -6,8 +6,8 @@
       | Горящие: {{ urgent_count or 0 }} | Всего: {{ total_count or 0 }} | Не оплачено всего: {{ '%.2f'|format(total_remaining or 0) }}
     </small>
   </h4>
-  <a href="{{ url_for('views.loan_new') }}" class="btn btn-success">
-    <i class="bi bi-plus-lg"></i> Добавить займ
+  <a href="{{ url_for('views.loan_new_v2') }}" class="btn btn-success">
+    <i class="bi bi-plus-lg"></i> 💳 Добавить займ
   </a>
 </div>
 
@@ -43,7 +43,7 @@
         {% endif %}
       </td>
       <td>
-        <a class="btn btn-primary btn-sm" href="/loan/{{ l.id }}">Открыть</a>
+        <a class="btn btn-primary btn-sm" href="/loan/{{ l.id }}/v2">Открыть</a>
       </td>
     </tr>
     {% endfor %}

@@ -24,6 +24,11 @@ class LoanORM(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     is_paid: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
     org_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Новые поля v2
+    loan_type: Mapped[Optional[str]] = mapped_column(String(50), default="single", nullable=True)  # single/installment
+    category: Mapped[Optional[str]] = mapped_column(String(50), default="microloan", nullable=True)  # microloan/installment/credit_card
+    interest_rate: Mapped[Optional[float]] = mapped_column(Float, default=0.0, nullable=True)  # Процентная ставка
 
     installments: Mapped[List["InstallmentORM"]] = relationship(
         back_populates="loan", cascade="all, delete-orphan"

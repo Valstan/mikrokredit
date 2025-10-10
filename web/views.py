@@ -421,10 +421,203 @@ def toggle_inst(loan_id: int, inst_id: int):
 @bp.post("/loan/<int:loan_id>/delete")
 @login_required
 def delete_loan_route(loan_id: int):
+    # JSON API
+    if request.is_json:
+        try:
+            with get_session() as session:
+                loan = session.get(LoanORM, loan_id)
+                if loan is None:
+                    return jsonify({"success": False, "error": "Займ не найден"}), 404
+                session.delete(loan)
+                session.commit()
+                cache_manager.delete("loans_data")
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    # HTML form
     with get_session() as session:
         loan = session.get(LoanORM, loan_id)
         if loan:
             session.delete(loan)
             session.commit()
+            cache_manager.delete("loans_data")
     flash("Кредит удален", "success")
     return redirect(url_for("views.loans_index"))
+
+
+# ========== НОВЫЕ МАРШРУТЫ V2 ==========
+
+@bp.route("/loan/new/v2", methods=["GET"])
+@login_required
+def loan_new_v2():
+    """Новый интерфейс создания займа"""
+    return render_template("loan_edit_v2.html", loan=None, installments_json="[]")
+
+
+@bp.route("/loan/<int:loan_id>/v2", methods=["GET"])
+@login_required
+def loan_edit_v2(loan_id: int):
+    """Новый интерфейс редактирования займа"""
+    with get_session() as session:
+        loan = session.get(LoanORM, loan_id)
+        if loan is None:
+            flash("Займ не найден", "error")
+            return redirect(url_for("views.loans_index"))
+        
+        # Получаем installments
+        insts = session.execute(
+            select(InstallmentORM)
+            .where(InstallmentORM.loan_id == loan.id)
+            .order_by(InstallmentORM.due_date.asc())
+        ).scalars().all()
+        
+        # Преобразуем в JSON
+        installments_json = json.dumps([{
+            'id': inst.id,
+            'due_date': inst.due_date,
+            'amount': float(inst.amount),
+            'paid': bool(inst.paid),
+            'paid_date': inst.paid_date
+        } for inst in insts])
+        
+        return render_template("loan_edit_v2.html", loan=loan, installments_json=installments_json)
+
+
+@bp.route("/loan/new/save", methods=["POST"])
+@login_required
+def loan_save_new():
+    """Сохранение нового займа (JSON API)"""
+    try:
+        data = request.get_json()
+        
+        with get_session() as session:
+            # Создаём займ
+            loan = LoanORM(
+                org_name=data['org_name'],
+                website=data['website'],
+                loan_date=data['loan_date'],
+                amount_borrowed=float(data['amount_borrowed']),
+                amount_due=float(data['amount_due']),
+                due_date=data['due_date'],
+                risky_org=1 if data.get('risky_org') else 0,
+                notes=data.get('notes', ''),
+                payment_methods=data.get('payment_methods', ''),
+                reminded_pre_due=0,
+                created_at=datetime.now().isoformat(),
+                is_paid=0,
+                loan_type=data.get('loan_type', 'single'),
+                category=data.get('category', 'microloan'),
+                interest_rate=float(data.get('interest_rate', 0))
+            )
+            session.add(loan)
+            session.flush()  # Получаем ID
+            
+            # Создаём installments если есть
+            if data.get('installments'):
+                for inst_data in data['installments']:
+                    inst = InstallmentORM(
+                        loan_id=loan.id,
+                        due_date=inst_data['due_date'],
+                        amount=float(inst_data['amount']),
+                        paid=1 if inst_data.get('paid') else 0,
+                        paid_date=inst_data.get('paid_date'),
+                        created_at=datetime.now().isoformat()
+                    )
+                    session.add(inst)
+            
+            # Синхронизируем is_paid
+            sync_loan_paid_status(session, loan.id)
+            
+            session.commit()
+            cache_manager.delete("loans_data")
+            
+            return jsonify({"success": True, "loan_id": loan.id})
+    
+    except Exception as e:
+        print(f"ERROR in loan_save_new: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/loan/<int:loan_id>/save", methods=["POST"])
+@login_required
+def loan_save_existing(loan_id: int):
+    """Обновление существующего займа (JSON API)"""
+    try:
+        data = request.get_json()
+        
+        with get_session() as session:
+            loan = session.get(LoanORM, loan_id)
+            if loan is None:
+                return jsonify({"success": False, "error": "Займ не найден"}), 404
+            
+            # Обновляем поля займа
+            loan.org_name = data['org_name']
+            loan.website = data['website']
+            loan.loan_date = data['loan_date']
+            loan.amount_borrowed = float(data['amount_borrowed'])
+            loan.amount_due = float(data['amount_due'])
+            loan.due_date = data['due_date']
+            loan.risky_org = 1 if data.get('risky_org') else 0
+            loan.notes = data.get('notes', '')
+            loan.payment_methods = data.get('payment_methods', '')
+            loan.loan_type = data.get('loan_type', 'single')
+            loan.category = data.get('category', 'microloan')
+            loan.interest_rate = float(data.get('interest_rate', 0))
+            
+            # Удаляем все старые installments
+            session.execute(
+                select(InstallmentORM).where(InstallmentORM.loan_id == loan_id)
+            )
+            for inst in session.execute(
+                select(InstallmentORM).where(InstallmentORM.loan_id == loan_id)
+            ).scalars().all():
+                session.delete(inst)
+            
+            # Создаём новые installments
+            if data.get('installments'):
+                for inst_data in data['installments']:
+                    inst = InstallmentORM(
+                        loan_id=loan.id,
+                        due_date=inst_data['due_date'],
+                        amount=float(inst_data['amount']),
+                        paid=1 if inst_data.get('paid') else 0,
+                        paid_date=inst_data.get('paid_date'),
+                        created_at=datetime.now().isoformat()
+                    )
+                    session.add(inst)
+            
+            # Синхронизируем is_paid
+            sync_loan_paid_status(session, loan.id)
+            
+            session.commit()
+            cache_manager.delete("loans_data")
+            
+            return jsonify({"success": True})
+    
+    except Exception as e:
+        print(f"ERROR in loan_save_existing: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def sync_loan_paid_status(session: Session, loan_id: int):
+    """Автоматическая синхронизация is_paid на основе installments"""
+    loan = session.get(LoanORM, loan_id)
+    if loan is None:
+        return
+    
+    # Проверяем есть ли installments
+    total_count = session.execute(
+        select(func.count(InstallmentORM.id))
+        .where(InstallmentORM.loan_id == loan_id)
+    ).scalar()
+    
+    if total_count > 0:
+        # Есть installments - проверяем неоплаченные
+        unpaid_count = session.execute(
+            select(func.count(InstallmentORM.id))
+            .where(InstallmentORM.loan_id == loan_id, InstallmentORM.paid == 0)
+        ).scalar()
+        
+        loan.is_paid = 1 if unpaid_count == 0 else 0
+    # Если нет installments - оставляем is_paid как есть
