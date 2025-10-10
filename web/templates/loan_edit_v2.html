@@ -6,41 +6,50 @@
      data-loan='{{ loan_json|safe }}' 
      data-installments='{{ installments_json|safe }}' 
      x-init="init()">
-    <!-- Заголовок -->
+    
+    <!-- Заголовок с названием банка -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">
+        <h3 class="mb-0">
             <span x-show="!loanId">💳 Новый займ</span>
-            <span x-show="loanId">💳 Займ #<span x-text="loanId"></span></span>
-        </h4>
-        <div class="d-flex gap-2">
+            <span x-show="loanId">🏦 <span x-text="loan.org_name || 'Займ'"></span></span>
+        </h3>
+        <div>
             <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/loans'">
-                ← Назад
+                ← Назад к списку
             </button>
         </div>
     </div>
 
-    <!-- Основная форма -->
-    <form @submit.prevent="saveLoan" class="needs-validation" novalidate>
+    <!-- Главная карточка -->
+    <form @submit.prevent="saveLoan">
         <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Основная информация</h5>
-            </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <!-- Банк -->
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">🏦 Банк / Организация *</label>
-                        <input type="text" x-model="loan.org_name" class="form-control" required 
-                               placeholder="Например: МаниМен">
+                    
+                    <!-- Название банка -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">🏦 Банк *</label>
+                        <input type="text" x-model="loan.org_name" class="form-control form-control-lg" 
+                               required placeholder="Название банка">
                     </div>
 
-                    <!-- Сайт -->
-                    <div class="col-md-6">
+                    <!-- Сумма к возврату -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">💰 К возврату (неоплачено) *</label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" step="0.01" x-model.number="unpaidAmount" 
+                                   class="form-control text-end fw-bold text-danger" 
+                                   readonly style="font-size: 1.5rem;">
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+
+                    <!-- Ссылка на сайт -->
+                    <div class="col-md-4">
                         <label class="form-label fw-bold">🌐 Сайт личного кабинета *</label>
-                        <div class="input-group">
-                            <input type="text" x-model="loan.website" class="form-control" required 
-                                   placeholder="https://example.com/lk">
-                            <button type="button" class="btn btn-outline-secondary" 
+                        <div class="input-group input-group-lg">
+                            <input type="text" x-model="loan.website" class="form-control" required>
+                            <button type="button" class="btn btn-outline-primary" 
                                     @click="window.open(loan.website, '_blank')" 
                                     :disabled="!loan.website">
                                 Открыть
@@ -48,232 +57,144 @@
                         </div>
                     </div>
 
-                    <!-- Категория -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">🏷️ Категория</label>
-                        <select x-model="loan.category" class="form-select">
-                            <option value="microloan">💰 Микрозайм</option>
-                            <option value="installment">📊 Рассрочка</option>
-                            <option value="credit_card">💳 Кредитная карта</option>
-                        </select>
-                    </div>
-
-                    <!-- Дата оформления -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">📅 Дата оформления *</label>
-                        <input type="date" x-model="loan.loan_date" class="form-control" required>
-                    </div>
-
-                    <!-- Сумма взята -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">💵 Сумма взята *</label>
-                        <input type="number" step="0.01" x-model.number="loan.amount_borrowed" 
-                               class="form-control" required placeholder="0.00" 
-                               @input="calculateTotals">
-                    </div>
-
-                    <!-- Тип займа -->
+                    <!-- Заметки -->
                     <div class="col-12">
-                        <label class="form-label fw-bold">📋 Тип займа</label>
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" id="type-single" value="single" 
-                                   x-model="loan.loan_type" @change="handleTypeChange">
-                            <label class="btn btn-outline-primary" for="type-single">
-                                💵 Разовый платёж
-                            </label>
-                            
-                            <input type="radio" class="btn-check" id="type-installment" value="installment" 
-                                   x-model="loan.loan_type" @change="handleTypeChange">
-                            <label class="btn btn-outline-primary" for="type-installment">
-                                📊 Рассрочка (график платежей)
-                            </label>
-                        </div>
+                        <label class="form-label fw-bold">📝 Заметки</label>
+                        <textarea x-model="loan.notes" class="form-control" rows="2" 
+                                  placeholder="Любая дополнительная информация..."></textarea>
                     </div>
-
-                    <!-- Разовый платёж -->
-                    <template x-if="loan.loan_type === 'single'">
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <strong>💵 Разовый платёж:</strong> Вся сумма возвращается одним платежом
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">📅 Дата возврата *</label>
-                                    <input type="date" x-model="loan.due_date" class="form-control" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">💰 Сумма к возврату *</label>
-                                    <input type="number" step="0.01" x-model.number="loan.amount_due" 
-                                           class="form-control" required @input="calculateTotals">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">📈 Переплата</label>
-                                    <div class="form-control-plaintext">
-                                        <strong><span x-text="overpaymentAmount"></span> ₽</strong> 
-                                        (<span x-text="overpaymentPercent"></span>%)
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
                 </div>
             </div>
         </div>
 
-        <!-- График платежей (только для рассрочки) -->
-        <template x-if="loan.loan_type === 'installment'">
-            <div class="card shadow-sm mt-3">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">📊 График платежей</h5>
-                    <button type="button" class="btn btn-sm btn-light" @click="addInstallment">
-                        ➕ Добавить платёж
+        <!-- График платежей -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-gradient d-flex justify-content-between align-items-center" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h5 class="mb-0">📅 График платежей</h5>
+                <button type="button" class="btn btn-light btn-sm" @click="addInstallment">
+                    ➕ Добавить платёж
+                </button>
+            </div>
+            <div class="card-body p-0">
+                
+                <!-- Пустое состояние -->
+                <div x-show="installments.length === 0" class="text-center py-5 text-muted">
+                    <div style="font-size: 3rem;">📋</div>
+                    <p class="mb-3">Нет платежей</p>
+                    <button type="button" class="btn btn-primary" @click="addInstallment">
+                        ➕ Добавить первый платёж
                     </button>
                 </div>
-                <div class="card-body">
-                    <!-- Таблица платежей -->
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px">#</th>
-                                    <th style="width: 180px">📅 Дата платежа</th>
-                                    <th style="width: 150px" class="text-end">💰 Сумма</th>
-                                    <th style="width: 120px" class="text-center">✓ Оплачен</th>
-                                    <th style="width: 150px">📅 Дата оплаты</th>
-                                    <th style="width: 120px" class="text-end">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-if="installments.length === 0">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
-                                            📋 Добавьте платежи в график
-                                        </td>
-                                    </tr>
-                                </template>
-                                <template x-for="(inst, index) in installments" :key="index">
-                                    <tr :class="{'table-success': inst.paid, 'table-warning': isUrgent(inst)}">
-                                        <td><span x-text="index + 1"></span></td>
-                                        <td>
-                                            <input type="date" x-model="inst.due_date" 
-                                                   class="form-control form-control-sm" required 
-                                                   @change="calculateTotals">
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.01" x-model.number="inst.amount" 
-                                                   class="form-control form-control-sm text-end" required 
-                                                   @input="calculateTotals">
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="checkbox" x-model="inst.paid" 
-                                                   class="form-check-input" style="width: 1.5rem; height: 1.5rem;" 
-                                                   @change="handlePaidChange(inst)">
-                                        </td>
-                                        <td>
-                                            <input type="date" x-model="inst.paid_date" 
-                                                   class="form-control form-control-sm" 
-                                                   :disabled="!inst.paid">
-                                        </td>
-                                        <td class="text-end">
-                                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                    @click="removeInstallment(index)" 
-                                                    title="Удалить">
-                                                🗑️
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                            <tfoot class="table-light fw-bold">
-                                <tr>
-                                    <td colspan="2" class="text-end">ИТОГО:</td>
-                                    <td class="text-end"><span x-text="formatMoney(totalInstallments)"></span> ₽</td>
-                                    <td colspan="3">
-                                        <span class="badge bg-danger me-2">Не оплачено: <span x-text="formatMoney(unpaidAmount)"></span> ₽</span>
-                                        <span class="badge bg-success">Оплачено: <span x-text="formatMoney(paidAmount)"></span> ₽</span>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
 
-                    <!-- Сводка -->
-                    <div class="row g-3 mt-2">
-                        <div class="col-md-3">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Взято</div>
-                                <div class="h5 mb-0"><span x-text="formatMoney(loan.amount_borrowed)"></span> ₽</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">К возврату</div>
-                                <div class="h5 mb-0"><span x-text="formatMoney(totalInstallments)"></span> ₽</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Переплата</div>
-                                <div class="h5 mb-0 text-danger">
-                                    +<span x-text="formatMoney(overpaymentAmountNum)"></span> ₽ 
-                                    (<span x-text="overpaymentPercent"></span>%)
+                <!-- Таблица платежей -->
+                <table class="table table-hover mb-0" x-show="installments.length > 0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px" class="text-center">#</th>
+                            <th style="width: 200px">📅 Дата платежа</th>
+                            <th style="width: 180px" class="text-end">💰 Сумма</th>
+                            <th style="width: 100px" class="text-center">✓</th>
+                            <th style="width: 150px">Дата оплаты</th>
+                            <th style="width: 80px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(inst, index) in installments" :key="index">
+                            <tr :class="{
+                                'table-success': inst.paid,
+                                'table-danger': !inst.paid && isOverdue(inst),
+                                'table-warning': !inst.paid && isUrgent(inst) && !isOverdue(inst)
+                            }">
+                                <!-- Номер -->
+                                <td class="text-center fw-bold">
+                                    <span x-text="index + 1"></span>
+                                </td>
+                                
+                                <!-- Дата платежа -->
+                                <td>
+                                    <input type="date" x-model="inst.due_date" 
+                                           class="form-control form-control-lg border-2" 
+                                           required @change="calculateTotals"
+                                           :class="{'border-danger': !inst.paid && isOverdue(inst), 'border-warning': !inst.paid && isUrgent(inst)}">
+                                </td>
+                                
+                                <!-- Сумма -->
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" x-model.number="inst.amount" 
+                                               class="form-control form-control-lg text-end fw-bold border-2" 
+                                               required @input="calculateTotals"
+                                               :class="{'border-danger': !inst.paid && isOverdue(inst), 'border-warning': !inst.paid && isUrgent(inst)}"
+                                               style="font-size: 1.2rem;">
+                                        <span class="input-group-text">₽</span>
+                                    </div>
+                                </td>
+                                
+                                <!-- Чекбокс оплаты -->
+                                <td class="text-center">
+                                    <input type="checkbox" x-model="inst.paid" 
+                                           class="form-check-input" 
+                                           style="width: 2rem; height: 2rem; cursor: pointer;" 
+                                           @change="handlePaidChange(inst)">
+                                </td>
+                                
+                                <!-- Дата оплаты -->
+                                <td>
+                                    <input type="date" x-model="inst.paid_date" 
+                                           class="form-control" 
+                                           :disabled="!inst.paid">
+                                </td>
+                                
+                                <!-- Удалить -->
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            @click="removeInstallment(index)" title="Удалить">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    
+                    <!-- Итого -->
+                    <tfoot class="table-light" x-show="installments.length > 0">
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold" style="font-size: 1.1rem;">ИТОГО:</td>
+                            <td class="text-end">
+                                <div class="fw-bold" style="font-size: 1.3rem;">
+                                    <span x-text="formatMoney(totalInstallments)"></span> ₽
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Средний платёж</div>
-                                <div class="h5 mb-0"><span x-text="formatMoney(averagePayment)"></span> ₽</div>
-                            </div>
-                        </div>
-                    </div>
+                            </td>
+                            <td colspan="3">
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-danger fs-6">
+                                        Не оплачено: <span x-text="formatMoney(unpaidAmount)"></span> ₽
+                                    </span>
+                                    <span class="badge bg-success fs-6">
+                                        Оплачено: <span x-text="formatMoney(paidAmount)"></span> ₽
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
 
-                    <!-- Прогресс бар -->
-                    <div class="mt-3">
-                        <label class="form-label small text-muted">Прогресс оплаты:</label>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 :style="`width: ${progressPercent}%`" 
-                                 :aria-valuenow="progressPercent" 
-                                 aria-valuemin="0" aria-valuemax="100">
-                                <span x-text="`${progressPercent}%`"></span>
-                            </div>
+                <!-- Прогресс бар -->
+                <div class="p-3" x-show="installments.length > 0">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Прогресс оплаты:</small>
+                        <small class="fw-bold">
+                            <span x-text="paidCount"></span> из <span x-text="installments.length"></span> 
+                            (<span x-text="progressPercent"></span>%)
+                        </small>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             :style="`width: ${progressPercent}%`" 
+                             :aria-valuenow="progressPercent">
+                            <strong><span x-text="progressPercent"></span>%</strong>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </template>
-
-        <!-- Дополнительная информация -->
-        <div class="card shadow-sm mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">📝 Дополнительная информация</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <!-- Рискованная организация -->
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="risky" 
-                                   x-model="loan.risky_org">
-                            <label class="form-check-label fw-bold" for="risky">
-                                ⚠️ Рискованная организация (скрытые страховки/услуги)
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Заметки -->
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">📋 Заметки</label>
-                        <textarea x-model="loan.notes" class="form-control" rows="4" 
-                                  placeholder="Любая дополнительная информация..."></textarea>
-                    </div>
-
-                    <!-- Способы оплаты -->
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">💳 Способы оплаты / Комиссии</label>
-                        <textarea x-model="loan.payment_methods" class="form-control" rows="4" 
-                                  placeholder="СБП, карта (комиссия 5%), и т.д."></textarea>
                     </div>
                 </div>
             </div>
@@ -289,20 +210,19 @@
             </button>
             
             <template x-if="loanId">
-                <button type="button" class="btn btn-outline-danger" 
+                <button type="button" class="btn btn-outline-danger btn-lg" 
                         @click="deleteLoan" :disabled="deleting">
                     <span x-show="!deleting">🗑️ Удалить займ</span>
                     <span x-show="deleting">Удаление...</span>
                 </button>
             </template>
             
-            <button type="button" class="btn btn-outline-secondary" 
+            <button type="button" class="btn btn-outline-secondary btn-lg" 
                     onclick="window.location.href='/loans'">
                 ❌ Отмена
             </button>
         </div>
     </form>
-
 </div>
 
 <script>
@@ -314,16 +234,8 @@ function loanEditor() {
         loan: {
             org_name: '',
             website: '',
-            loan_date: new Date().toISOString().split('T')[0],
             amount_borrowed: 0,
-            amount_due: 0,
-            due_date: '',
-            risky_org: false,
-            notes: '',
-            payment_methods: '',
-            loan_type: 'single',
-            category: 'microloan',
-            interest_rate: 0
+            notes: ''
         },
         installments: [],
 
@@ -337,11 +249,16 @@ function loanEditor() {
                 try {
                     const loanData = JSON.parse(loanDataAttr);
                     if (loanData) {
-                        this.loan = loanData;
+                        this.loan = {
+                            org_name: loanData.org_name || '',
+                            website: loanData.website || '',
+                            amount_borrowed: loanData.amount_borrowed || 0,
+                            notes: loanData.notes || ''
+                        };
                         this.loanId = loanData.id;
                     }
                 } catch (e) {
-                    console.error('Error parsing loan data:', e, loanDataAttr);
+                    console.error('Error parsing loan data:', e);
                 }
             }
             
@@ -356,26 +273,7 @@ function loanEditor() {
                 }
             }
             
-            console.log('✅ Loan editor initialized:', {
-                loanId: this.loanId,
-                org_name: this.loan.org_name,
-                installments: this.installments.length
-            });
-            
-            this.calculateTotals();
-        },
-
-        handleTypeChange() {
-            if (this.loan.loan_type === 'single') {
-                // Очищаем installments
-                this.installments = [];
-            } else {
-                // Добавляем первый платёж если пусто
-                if (this.installments.length === 0) {
-                    this.addInstallment();
-                }
-            }
-            this.calculateTotals();
+            console.log('✅ Loan loaded:', this.loan.org_name, 'Payments:', this.installments.length);
         },
 
         addInstallment() {
@@ -391,7 +289,6 @@ function loanEditor() {
         removeInstallment(index) {
             if (confirm('Удалить этот платёж?')) {
                 this.installments.splice(index, 1);
-                this.calculateTotals();
             }
         },
 
@@ -401,7 +298,13 @@ function loanEditor() {
             } else if (!inst.paid) {
                 inst.paid_date = null;
             }
-            this.calculateTotals();
+        },
+
+        isOverdue(inst) {
+            if (inst.paid) return false;
+            const today = new Date();
+            const dueDate = new Date(inst.due_date);
+            return dueDate < today;
         },
 
         isUrgent(inst) {
@@ -410,30 +313,6 @@ function loanEditor() {
             const dueDate = new Date(inst.due_date);
             const daysLeft = Math.floor((dueDate - today) / (1000 * 60 * 60 * 24));
             return daysLeft >= 0 && daysLeft <= 5;
-        },
-
-        calculateTotals() {
-            // Для рассрочки
-            if (this.loan.loan_type === 'installment') {
-                const total = this.installments.reduce((sum, inst) => sum + (parseFloat(inst.amount) || 0), 0);
-                this.loan.amount_due = total;
-                
-                // Устанавливаем due_date как дату последнего платежа
-                if (this.installments.length > 0) {
-                    const sortedDates = this.installments
-                        .map(i => i.due_date)
-                        .filter(d => d)
-                        .sort();
-                    if (sortedDates.length > 0) {
-                        this.loan.due_date = sortedDates[sortedDates.length - 1];
-                    }
-                }
-            }
-            
-            // Расчёт процента
-            if (this.loan.amount_borrowed > 0) {
-                this.loan.interest_rate = ((this.loan.amount_due - this.loan.amount_borrowed) / this.loan.amount_borrowed * 100).toFixed(2);
-            }
         },
 
         get totalInstallments() {
@@ -450,40 +329,64 @@ function loanEditor() {
             return this.totalInstallments - this.paidAmount;
         },
 
-        get averagePayment() {
-            return this.installments.length > 0 ? this.totalInstallments / this.installments.length : 0;
+        get paidCount() {
+            return this.installments.filter(inst => inst.paid).length;
         },
 
         get progressPercent() {
-            return this.totalInstallments > 0 
-                ? Math.round((this.paidAmount / this.totalInstallments) * 100) 
+            return this.installments.length > 0 
+                ? Math.round((this.paidCount / this.installments.length) * 100) 
                 : 0;
         },
 
-        get overpaymentAmountNum() {
-            return Math.max(0, (this.loan.amount_due || 0) - (this.loan.amount_borrowed || 0));
-        },
-
-        get overpaymentAmount() {
-            return this.formatMoney(this.overpaymentAmountNum);
-        },
-
-        get overpaymentPercent() {
-            return this.loan.amount_borrowed > 0 
-                ? ((this.overpaymentAmountNum / this.loan.amount_borrowed) * 100).toFixed(2)
-                : '0.00';
-        },
-
         formatMoney(value) {
-            return parseFloat(value || 0).toFixed(2);
+            return parseFloat(value || 0).toLocaleString('ru-RU', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         },
 
         async saveLoan() {
+            // Валидация
+            if (!this.loan.org_name || !this.loan.website) {
+                alert('❌ Заполните название банка и сайт');
+                return;
+            }
+
+            if (this.installments.length === 0) {
+                alert('❌ Добавьте хотя бы один платёж');
+                return;
+            }
+
+            // Проверка заполненности платежей
+            for (let i = 0; i < this.installments.length; i++) {
+                const inst = this.installments[i];
+                if (!inst.due_date || !inst.amount || inst.amount <= 0) {
+                    alert(`❌ Заполните дату и сумму для платежа #${i + 1}`);
+                    return;
+                }
+            }
+
             this.saving = true;
             try {
+                // Формируем данные
                 const data = {
-                    ...this.loan,
-                    installments: this.loan.loan_type === 'installment' ? this.installments : []
+                    org_name: this.loan.org_name,
+                    website: this.loan.website,
+                    amount_borrowed: this.loan.amount_borrowed,
+                    notes: this.loan.notes,
+                    // Технические поля
+                    loan_date: new Date().toISOString().split('T')[0],
+                    amount_due: this.totalInstallments,
+                    due_date: this.installments.length > 0 
+                        ? this.installments[this.installments.length - 1].due_date 
+                        : new Date().toISOString().split('T')[0],
+                    risky_org: false,
+                    payment_methods: '',
+                    loan_type: 'installment',
+                    category: 'microloan',
+                    interest_rate: 0,
+                    installments: this.installments
                 };
 
                 const url = this.loanId ? `/loan/${this.loanId}/save` : '/loan/new/save';
@@ -508,7 +411,7 @@ function loanEditor() {
         },
 
         async deleteLoan() {
-            if (!confirm('⚠️ Удалить займ и все связанные платежи? Это действие нельзя отменить!')) {
+            if (!confirm('⚠️ Удалить займ и все платежи? Это действие нельзя отменить!')) {
                 return;
             }
 
@@ -523,7 +426,7 @@ function loanEditor() {
                     alert('✅ Займ удалён!');
                     window.location.href = '/loans';
                 } else {
-                    alert('❌ Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+                    alert('❌ Ошибка удаления');
                 }
             } catch (error) {
                 alert('❌ Ошибка: ' + error.message);
@@ -536,9 +439,10 @@ function loanEditor() {
 </script>
 
 <style>
-.modal.show { display: block; }
-.form-check-input:checked { background-color: #28a745; border-color: #28a745; }
+.table-danger { background-color: #f8d7da !important; }
 .table-warning { background-color: #fff3cd !important; }
+.table-success { background-color: #d1e7dd !important; }
+.border-danger { border-color: #dc3545 !important; border-width: 2px !important; }
+.border-warning { border-color: #ffc107 !important; border-width: 2px !important; }
 </style>
 {% endblock %}
-
