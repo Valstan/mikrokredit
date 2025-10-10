@@ -27,33 +27,50 @@
                 <div class="row g-3">
                     
                     <!-- Название банка -->
-                    <div class="col-md-4">
+                    <div class="col-md-12">
                         <label class="form-label fw-bold">🏦 Банк *</label>
                         <input type="text" x-model="loan.org_name" class="form-control form-control-lg" 
                                required placeholder="Название банка">
                     </div>
 
-                    <!-- Сумма к возврату -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">💰 К возврату (неоплачено) *</label>
-                        <div class="input-group input-group-lg">
-                            <input type="number" step="0.01" x-model.number="unpaidAmount" 
-                                   class="form-control text-end fw-bold text-danger" 
-                                   readonly style="font-size: 1.5rem;">
-                            <span class="input-group-text">₽</span>
-                        </div>
-                    </div>
-
-                    <!-- Ссылка на сайт -->
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">🌐 Сайт личного кабинета *</label>
-                        <div class="input-group input-group-lg">
-                            <input type="text" x-model="loan.website" class="form-control" required>
-                            <button type="button" class="btn btn-outline-primary" 
-                                    @click="window.open(loan.website, '_blank')" 
-                                    :disabled="!loan.website">
-                                Открыть
-                            </button>
+                    <!-- Информационная строка: Сумма + Дата + Ссылка -->
+                    <div class="col-md-12">
+                        <div class="d-flex align-items-center gap-4 p-3 bg-light rounded">
+                            <!-- Сумма к возврату -->
+                            <div>
+                                <small class="text-muted d-block mb-1">💰 К возврату</small>
+                                <h4 class="mb-0 text-danger fw-bold">
+                                    <span x-text="formatMoney(unpaidAmount)"></span> ₽
+                                </h4>
+                            </div>
+                            
+                            <!-- Разделитель -->
+                            <div class="vr" style="height: 50px;"></div>
+                            
+                            <!-- Ближайшая дата платежа -->
+                            <div>
+                                <small class="text-muted d-block mb-1">📅 Ближайший платёж</small>
+                                <h5 class="mb-0" :class="getNextPaymentDateClass()">
+                                    <span x-text="getNextPaymentDateFormatted()"></span>
+                                </h5>
+                            </div>
+                            
+                            <!-- Разделитель -->
+                            <div class="vr" style="height: 50px;"></div>
+                            
+                            <!-- Ссылка на сайт -->
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block mb-1">🌐 Сайт банка</small>
+                                <div class="input-group">
+                                    <input type="text" x-model="loan.website" class="form-control" 
+                                           required placeholder="https://example.com">
+                                    <button type="button" class="btn btn-outline-primary" 
+                                            @click="window.open(loan.website, '_blank')" 
+                                            :disabled="!loan.website">
+                                        Открыть
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -315,6 +332,47 @@ function loanEditor() {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
+        },
+
+        getNextPaymentDate() {
+            // Находим ближайший неоплаченный платёж
+            const unpaid = this.installments.filter(inst => !inst.paid && inst.due_date);
+            if (unpaid.length === 0) return null;
+            
+            unpaid.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+            return unpaid[0].due_date;
+        },
+
+        getNextPaymentDateFormatted() {
+            const nextDate = this.getNextPaymentDate();
+            if (!nextDate) return 'Нет платежей';
+            
+            const date = new Date(nextDate + 'T00:00:00'); // Добавляем время чтобы избежать проблем с timezone
+            const months = [
+                'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+            ];
+            
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            
+            return `${day} ${month} ${year}`;
+        },
+
+        getNextPaymentDateClass() {
+            const nextDate = this.getNextPaymentDate();
+            if (!nextDate) return '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dueDate = new Date(nextDate + 'T00:00:00');
+            const daysLeft = Math.floor((dueDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysLeft < 0) return 'text-danger fw-bold'; // Просрочено
+            if (daysLeft <= 2) return 'text-danger fw-bold'; // Горящий
+            if (daysLeft <= 5) return 'text-warning fw-bold'; // Скоро
+            return 'text-success'; // Норма
         },
 
         async saveLoan() {
