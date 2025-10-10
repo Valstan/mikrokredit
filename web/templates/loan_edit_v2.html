@@ -69,22 +69,11 @@
 
         <!-- График платежей -->
         <div class="card shadow-sm mt-3">
-            <div class="card-header bg-gradient d-flex justify-content-between align-items-center" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                <h5 class="mb-0">📅 График платежей</h5>
-                <button type="button" class="btn btn-light btn-sm" @click="addInstallment">
-                    ➕ Добавить платёж
-                </button>
-            </div>
             <div class="card-body p-0">
                 
                 <!-- Пустое состояние -->
-                <div x-show="installments.length === 0" class="text-center py-5 text-muted">
-                    <div style="font-size: 3rem;">📋</div>
-                    <p class="mb-3">Нет платежей</p>
-                    <button type="button" class="btn btn-primary" @click="addInstallment">
-                        ➕ Добавить первый платёж
-                    </button>
+                <div x-show="installments.length === 0" class="text-center py-4 text-muted">
+                    <p class="mb-0">Платежей пока нет</p>
                 </div>
 
                 <!-- Таблица платежей -->
@@ -92,11 +81,10 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 50px" class="text-center">#</th>
-                            <th style="width: 200px">📅 Дата платежа</th>
-                            <th style="width: 180px" class="text-end">💰 Сумма</th>
+                            <th style="width: 250px">📅 Дата платежа</th>
+                            <th style="width: 200px" class="text-end">💰 Сумма</th>
                             <th style="width: 100px" class="text-center">✓</th>
-                            <th style="width: 150px">Дата оплаты</th>
-                            <th style="width: 80px"></th>
+                            <th style="width: 120px"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,18 +127,12 @@
                                            @change="handlePaidChange(inst)">
                                 </td>
                                 
-                                <!-- Дата оплаты -->
-                                <td>
-                                    <input type="date" x-model="inst.paid_date" 
-                                           class="form-control" 
-                                           :disabled="!inst.paid">
-                                </td>
-                                
                                 <!-- Удалить -->
                                 <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            @click="removeInstallment(index)" title="Удалить">
-                                        🗑️
+                                    <button type="button" class="btn btn-sm btn-secondary" 
+                                            @click="removeInstallment(index)" 
+                                            style="color: #dc3545; font-weight: 600;">
+                                        Удалить
                                     </button>
                                 </td>
                             </tr>
@@ -166,7 +148,7 @@
                                     <span x-text="formatMoney(totalInstallments)"></span> ₽
                                 </div>
                             </td>
-                            <td colspan="3">
+                            <td colspan="2">
                                 <div class="d-flex gap-2">
                                     <span class="badge bg-danger fs-6">
                                         Не оплачено: <span x-text="formatMoney(unpaidAmount)"></span> ₽
@@ -180,22 +162,11 @@
                     </tfoot>
                 </table>
 
-                <!-- Прогресс бар -->
-                <div class="p-3" x-show="installments.length > 0">
-                    <div class="d-flex justify-content-between mb-2">
-                        <small class="text-muted">Прогресс оплаты:</small>
-                        <small class="fw-bold">
-                            <span x-text="paidCount"></span> из <span x-text="installments.length"></span> 
-                            (<span x-text="progressPercent"></span>%)
-                        </small>
-                    </div>
-                    <div class="progress" style="height: 30px;">
-                        <div class="progress-bar bg-success" role="progressbar" 
-                             :style="`width: ${progressPercent}%`" 
-                             :aria-valuenow="progressPercent">
-                            <strong><span x-text="progressPercent"></span>%</strong>
-                        </div>
-                    </div>
+                <!-- Кнопка добавления платежа -->
+                <div class="p-3 border-top">
+                    <button type="button" class="btn btn-success w-100" @click="addInstallment">
+                        ➕ Добавить платёж
+                    </button>
                 </div>
             </div>
         </div>
