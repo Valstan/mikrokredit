@@ -4,26 +4,32 @@
 <style>
 .loan-row {
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .loan-row:hover {
-    filter: brightness(0.95);
+    filter: brightness(0.90);
+    transform: scale(1.002);
 }
 
-.loan-row-neutral {
+/* Нейтральные - почти белый фон */
+.loan-row.loan-row-neutral td {
     background-color: #f8f9fa !important;
 }
 
-.loan-row-urgent {
+/* Горящие - красный фон (≤2 дня) */
+.loan-row.loan-row-urgent td {
     background-color: #f8d7da !important;
+    font-weight: 500;
 }
 
-.loan-row-warning {
+/* Предупреждение - желтый фон (3-5 дней) */
+.loan-row.loan-row-warning td {
     background-color: #fff3cd !important;
 }
 
-.loan-row-paid {
+/* Оплаченные - зеленый фон */
+.loan-row.loan-row-paid td {
     background-color: #d1e7dd !important;
 }
 </style>
@@ -40,7 +46,7 @@
 </div>
 
 <div class="table-responsive">
-<table class="table table-striped align-middle">
+<table class="table align-middle">
   <thead>
     <tr>
       <th>ID</th>
