@@ -25,7 +25,7 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 TELEGRAM_CHAT_ID = str(TELEGRAM_CHAT_ID)
 
 # Настройки уведомлений
-DAYS_BEFORE_DUE = 2  # Уведомлять за 2 дня и менее
+DAYS_BEFORE_DUE = 5  # Уведомлять за 5 дней и менее (как на dashboard)
 
 
 def send_telegram_message(text: str) -> bool:
