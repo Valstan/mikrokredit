@@ -500,6 +500,10 @@ def loan_edit_v2(loan_id: int):
             'paid': bool(inst.paid),
             'paid_date': inst.paid_date
         } for inst in insts])
+    
+    # DEBUG
+    print(f"DEBUG loan_edit_v2: loan_json = {loan_json[:200]}")
+    print(f"DEBUG loan_edit_v2: installments_json = {installments_json[:200]}")
         
     return render_template("loan_edit_v2.html", 
                          loan_json=loan_json, 
