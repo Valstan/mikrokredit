@@ -1,5 +1,33 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+.loan-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.loan-row:hover {
+    filter: brightness(0.95);
+}
+
+.loan-row-neutral {
+    background-color: #f8f9fa !important;
+}
+
+.loan-row-urgent {
+    background-color: #f8d7da !important;
+}
+
+.loan-row-warning {
+    background-color: #fff3cd !important;
+}
+
+.loan-row-paid {
+    background-color: #d1e7dd !important;
+}
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4>Кредиты
     <small class="text-muted" style="font-weight: normal;">
@@ -19,31 +47,24 @@
       <th>Банк</th>
       <th>Платеж (дата)</th>
       <th>Платеж</th>
-      <th>Взято</th>
       <th>Осталось</th>
-      <th>Дата (последняя)</th>
       <th>Сайт</th>
-      <th></th>
     </tr>
   </thead>
   <tbody>
     {% for it in items %}
     {% set l = it.loan %}
-    <tr class="{{ 'table-success' if it.paid else ('table-danger' if it.urgent else ('table-warning' if it.next_date else '')) }}">
+    <tr class="loan-row {{ 'loan-row-paid' if it.paid else ('loan-row-urgent' if it.urgent else ('loan-row-warning' if it.next_date else 'loan-row-neutral')) }}" 
+        onclick="window.location.href='/loan/{{ l.id }}/v2';">
       <td>{{ l.id }}</td>
       <td>{{ l.org_name }}</td>
       <td>{{ it.next_date or '' }}</td>
       <td>{{ '%.2f'|format(it.next_amount) if it.next_amount is not none else '' }}</td>
-      <td class="text-end">{{ '%.2f'|format(l.amount_borrowed) }}</td>
       <td class="text-end">{{ '%.2f'|format(it.remaining) }}</td>
-      <td>{{ it.last_date or '' }}</td>
-      <td>
+      <td onclick="event.stopPropagation();">
         {% if l.website %}
-          <a class="btn btn-outline-secondary btn-sm" href="{{ l.website if l.website.startswith('http') else 'https://' ~ l.website }}" target="_blank">Открыть сайт</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ l.website if l.website.startswith('http') else 'https://' ~ l.website }}" target="_blank">Открыть сайт банка</a>
         {% endif %}
-      </td>
-      <td>
-        <a class="btn btn-primary btn-sm" href="/loan/{{ l.id }}/v2">Открыть</a>
       </td>
     </tr>
     {% endfor %}
