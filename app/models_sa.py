@@ -91,9 +91,20 @@ class TaskORM(Base):
     is_recurring: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # JSON с правилами повтора
     
+    # Новые поля для гибких расписаний
+    task_type: Mapped[str] = mapped_column(String(50), default="simple", nullable=False)  # simple, event, recurring_event
+    has_duration: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    duration_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Приостановка
+    is_paused: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    paused_until: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # YYYY-MM-DD
+    
     category: Mapped[Optional[TaskCategoryORM]] = relationship(back_populates="tasks")
     reminders: Mapped[List["TaskReminderORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
     subtasks: Mapped[List["SubtaskORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+    schedules: Mapped[List["TaskScheduleORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
+    reminder_rules: Mapped[List["ReminderRuleORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
 
 
 class SubtaskORM(Base):
@@ -149,3 +160,72 @@ class ReminderTemplateORM(Base):
     
     is_system: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)  # Системный шаблон
     created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class TaskScheduleORM(Base):
+    """Расписание для задачи (когда задача происходит)"""
+    __tablename__ = "task_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('task_schedules_id_seq'), primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    
+    # День недели (1=Понедельник, 2=Вторник, ..., 7=Воскресенье)
+    day_of_week: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Время начала (HH:MM формат)
+    start_time: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Время окончания (HH:MM формат) - для событий с длительностью
+    end_time: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Активно ли это расписание
+    is_active: Mapped[bool] = mapped_column(Integer, default=1, nullable=False)
+    
+    # Метаданные
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    task: Mapped[TaskORM] = relationship(back_populates="schedules")
+
+
+class ReminderRuleORM(Base):
+    """Правила напоминаний для задачи"""
+    __tablename__ = "reminder_rules"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('reminder_rules_id_seq'), primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    
+    # Тип правила
+    # 'before_start' - За X минут до начала (одноразово)
+    # 'before_end' - За X минут до конца (одноразово)
+    # 'periodic_before' - Периодически до начала
+    # 'periodic_during' - Периодически во время события
+    # 'after_end' - После окончания
+    rule_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    
+    # Для before_start/before_end: минуты до события
+    offset_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Для periodic: интервал в минутах
+    interval_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Для periodic_before: с какого времени начинать (HH:MM или минуты до начала)
+    start_from: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Для periodic_before: до какого времени (обычно до начала события)
+    stop_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Активно ли правило
+    is_active: Mapped[bool] = mapped_column(Integer, default=1, nullable=False)
+    
+    # Порядок отображения
+    order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Описание правила (для отображения)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Метаданные
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    task: Mapped[TaskORM] = relationship(back_populates="reminder_rules")

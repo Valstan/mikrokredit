@@ -8,7 +8,10 @@ import json
 
 from app.auth import login_required
 from app.db_sa import get_session
-from app.models_sa import TaskORM, TaskCategoryORM, SubtaskORM, TaskReminderORM, ReminderTemplateORM
+from app.models_sa import (
+    TaskORM, TaskCategoryORM, SubtaskORM, TaskReminderORM, ReminderTemplateORM,
+    TaskScheduleORM, ReminderRuleORM
+)
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
@@ -358,3 +361,252 @@ def apply_reminder_template(session, task: TaskORM, template_id: int):
     except Exception as e:
         print(f"Ошибка применения шаблона: {e}")
 
+
+# ==================== НОВАЯ ВЕРСИЯ С РАСПИСАНИЕМ (V2) ====================
+
+@bp.route('/new/v2', methods=['GET', 'POST'])
+@login_required
+def new_v2():
+    """Создание новой задачи v2 с расписанием"""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            with get_session() as session:
+                now = datetime.now().isoformat()
+                
+                # Создаем задачу
+                task_data = data['task']
+                task = TaskORM(
+                    title=task_data['title'],
+                    description=task_data.get('description', ''),
+                    importance=task_data.get('importance', 2),
+                    category_id=task_data.get('category_id') or None,
+                    task_type=task_data.get('task_type', 'simple'),
+                    due_date=task_data.get('due_date') or None,
+                    is_paused=task_data.get('is_paused', False),
+                    paused_until=task_data.get('paused_until') or None,
+                    status=0,
+                    is_recurring=task_data.get('task_type') == 'recurring_event',
+                    created_at=now,
+                    updated_at=now
+                )
+                session.add(task)
+                session.flush()
+                
+                # Создаем расписания
+                for schedule_data in data.get('schedules', []):
+                    schedule = TaskScheduleORM(
+                        task_id=task.id,
+                        day_of_week=schedule_data['day_of_week'],
+                        start_time=schedule_data['start_time'],
+                        end_time=schedule_data.get('end_time'),
+                        is_active=schedule_data.get('is_active', True),
+                        created_at=now,
+                        updated_at=now
+                    )
+                    session.add(schedule)
+                
+                # Создаем правила напоминаний
+                for rule_data in data.get('reminder_rules', []):
+                    rule = ReminderRuleORM(
+                        task_id=task.id,
+                        rule_type=rule_data['rule_type'],
+                        offset_minutes=rule_data.get('offset_minutes'),
+                        interval_minutes=rule_data.get('interval_minutes'),
+                        start_from=rule_data.get('start_from'),
+                        stop_at=rule_data.get('stop_at'),
+                        is_active=rule_data.get('is_active', True),
+                        order_index=rule_data.get('order_index', 0),
+                        created_at=now,
+                        updated_at=now
+                    )
+                    session.add(rule)
+                
+                session.commit()
+                
+                return jsonify({'success': True, 'task_id': task.id})
+        
+        except Exception as e:
+            print(f"Error creating task: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
+    
+    # GET - показываем форму
+    with get_session() as session:
+        categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
+        categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
+    
+    return render_template(
+        'tasks/edit_v2.html',
+        task_json='null',
+        schedules_json='[]',
+        rules_json='[]',
+        categories_json=json.dumps(categories)
+    )
+
+
+@bp.route('/<int:task_id>/edit/v2', methods=['GET', 'POST'])
+@login_required
+def edit_v2(task_id):
+    """Редактирование задачи v2"""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            with get_session() as session:
+                task = session.get(TaskORM, task_id)
+                if not task:
+                    return jsonify({'error': 'Задача не найдена'}), 404
+                
+                now = datetime.now().isoformat()
+                
+                # Обновляем задачу
+                task_data = data['task']
+                task.title = task_data['title']
+                task.description = task_data.get('description', '')
+                task.importance = task_data.get('importance', 2)
+                task.category_id = task_data.get('category_id') or None
+                task.task_type = task_data.get('task_type', 'simple')
+                task.due_date = task_data.get('due_date') or None
+                task.is_paused = task_data.get('is_paused', False)
+                task.paused_until = task_data.get('paused_until') or None
+                task.is_recurring = task_data.get('task_type') == 'recurring_event'
+                task.updated_at = now
+                
+                # Удаляем старые расписания
+                session.execute(
+                    select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
+                ).scalars().all()
+                for old_schedule in session.execute(
+                    select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
+                ).scalars():
+                    session.delete(old_schedule)
+                
+                # Создаем новые расписания
+                for schedule_data in data.get('schedules', []):
+                    schedule = TaskScheduleORM(
+                        task_id=task.id,
+                        day_of_week=schedule_data['day_of_week'],
+                        start_time=schedule_data['start_time'],
+                        end_time=schedule_data.get('end_time'),
+                        is_active=schedule_data.get('is_active', True),
+                        created_at=now,
+                        updated_at=now
+                    )
+                    session.add(schedule)
+                
+                # Удаляем старые правила
+                for old_rule in session.execute(
+                    select(ReminderRuleORM).where(ReminderRuleORM.task_id == task_id)
+                ).scalars():
+                    session.delete(old_rule)
+                
+                # Создаем новые правила
+                for rule_data in data.get('reminder_rules', []):
+                    rule = ReminderRuleORM(
+                        task_id=task.id,
+                        rule_type=rule_data['rule_type'],
+                        offset_minutes=rule_data.get('offset_minutes'),
+                        interval_minutes=rule_data.get('interval_minutes'),
+                        start_from=rule_data.get('start_from'),
+                        stop_at=rule_data.get('stop_at'),
+                        is_active=rule_data.get('is_active', True),
+                        order_index=rule_data.get('order_index', 0),
+                        created_at=now,
+                        updated_at=now
+                    )
+                    session.add(rule)
+                
+                session.commit()
+                
+                return jsonify({'success': True})
+        
+        except Exception as e:
+            print(f"Error updating task: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
+    
+    # GET - показываем форму
+    with get_session() as session:
+        task_orm = session.get(TaskORM, task_id)
+        if not task_orm:
+            flash('Задача не найдена', 'error')
+            return redirect(url_for('tasks.index'))
+        
+        # Преобразуем задачу в JSON
+        task_json = json.dumps({
+            'id': task_orm.id,
+            'title': task_orm.title,
+            'description': task_orm.description or '',
+            'importance': task_orm.importance,
+            'category_id': task_orm.category_id,
+            'task_type': task_orm.task_type,
+            'due_date': task_orm.due_date or '',
+            'is_paused': bool(task_orm.is_paused),
+            'paused_until': task_orm.paused_until or ''
+        })
+        
+        # Получаем расписания
+        schedules = session.execute(
+            select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
+        ).scalars().all()
+        
+        schedules_json = json.dumps([{
+            'id': s.id,
+            'day_of_week': s.day_of_week,
+            'start_time': s.start_time,
+            'end_time': s.end_time,
+            'is_active': bool(s.is_active)
+        } for s in schedules])
+        
+        # Получаем правила
+        rules = session.execute(
+            select(ReminderRuleORM).where(ReminderRuleORM.task_id == task_id)
+            .order_by(ReminderRuleORM.order_index)
+        ).scalars().all()
+        
+        rules_json = json.dumps([{
+            'id': r.id,
+            'rule_type': r.rule_type,
+            'offset_minutes': r.offset_minutes,
+            'interval_minutes': r.interval_minutes,
+            'start_from': r.start_from,
+            'stop_at': r.stop_at,
+            'is_active': bool(r.is_active),
+            'order_index': r.order_index
+        } for r in rules])
+        
+        # Категории
+        categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
+        categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
+    
+    return render_template(
+        'tasks/edit_v2.html',
+        task_json=task_json,
+        schedules_json=schedules_json,
+        rules_json=rules_json,
+        categories_json=json.dumps(categories)
+    )
+
+
+@bp.route('/<int:task_id>/delete/v2', methods=['POST'])
+@login_required
+def delete_v2(task_id):
+    """Удаление задачи v2"""
+    try:
+        with get_session() as session:
+            task = session.get(TaskORM, task_id)
+            if not task:
+                return jsonify({'error': 'Задача не найдена'}), 404
+            
+            session.delete(task)
+            session.commit()
+            
+            return jsonify({'success': True})
+    
+    except Exception as e:
+        print(f"Error deleting task: {e}")
+        return jsonify({'error': str(e)}), 500
