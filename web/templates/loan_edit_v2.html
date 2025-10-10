@@ -2,11 +2,10 @@
 
 {% block content %}
 
-<!-- Данные для Alpine.js -->
-<script id="loan-data" type="application/json">{{ loan_json|safe }}</script>
-<script id="installments-data" type="application/json">{{ installments_json|safe }}</script>
-
-<div x-data="loanEditor()" x-init="init()">
+<div x-data="loanEditor()" 
+     data-loan='{{ loan_json|safe }}' 
+     data-installments='{{ installments_json|safe }}' 
+     x-init="init()">
     <!-- Заголовок -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0">
@@ -329,32 +328,40 @@ function loanEditor() {
         installments: [],
 
         init() {
-            // Загружаем данные из <script type="application/json">
-            const loanDataEl = document.getElementById('loan-data');
-            const installmentsDataEl = document.getElementById('installments-data');
+            // Загружаем данные из data-атрибутов
+            const rootEl = this.$root;
             
-            if (loanDataEl && loanDataEl.textContent) {
+            // Loan data
+            const loanDataAttr = rootEl.getAttribute('data-loan');
+            if (loanDataAttr && loanDataAttr !== 'null') {
                 try {
-                    const loanData = JSON.parse(loanDataEl.textContent);
+                    const loanData = JSON.parse(loanDataAttr);
                     if (loanData) {
                         this.loan = loanData;
                         this.loanId = loanData.id;
                     }
                 } catch (e) {
-                    console.error('Error parsing loan data:', e);
+                    console.error('Error parsing loan data:', e, loanDataAttr);
                 }
             }
             
-            if (installmentsDataEl && installmentsDataEl.textContent) {
+            // Installments data
+            const installmentsDataAttr = rootEl.getAttribute('data-installments');
+            if (installmentsDataAttr) {
                 try {
-                    this.installments = JSON.parse(installmentsDataEl.textContent);
+                    this.installments = JSON.parse(installmentsDataAttr);
                 } catch (e) {
                     console.error('Error parsing installments data:', e);
                     this.installments = [];
                 }
             }
             
-            console.log('Loan editor initialized:', this.loanId, this.loan.org_name, this.installments.length);
+            console.log('✅ Loan editor initialized:', {
+                loanId: this.loanId,
+                org_name: this.loan.org_name,
+                installments: this.installments.length
+            });
+            
             this.calculateTotals();
         },
 
