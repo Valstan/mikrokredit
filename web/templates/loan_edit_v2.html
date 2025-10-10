@@ -19,11 +19,25 @@
                        required
                        style="max-width: 500px; font-size: 1.75rem; font-weight: 500;">
             </div>
-            <!-- Редактирование займа -->
+            <!-- Редактирование займа - inline редактирование названия -->
             <div x-show="loanId" class="d-flex align-items-center gap-2">
                 <span class="h3 mb-0">🏦</span>
-                <input type="text" x-model="loan.org_name" 
-                       class="form-control form-control-lg border-0 shadow-none h3 mb-0 p-0"
+                <!-- Режим просмотра -->
+                <h3 x-show="!editingBankName" 
+                    @click="editingBankName = true; $nextTick(() => $refs.bankNameInput.focus())"
+                    class="mb-0 text-primary"
+                    style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">
+                    <span x-text="loan.org_name || 'Название банка'"></span>
+                </h3>
+                <!-- Режим редактирования -->
+                <input x-show="editingBankName" 
+                       x-ref="bankNameInput"
+                       type="text" 
+                       x-model="loan.org_name" 
+                       @blur="editingBankName = false"
+                       @keydown.enter="editingBankName = false; $event.target.blur()"
+                       @keydown.escape="editingBankName = false; $event.target.blur()"
+                       class="form-control form-control-lg border-2 h3 mb-0"
                        placeholder="Название банка"
                        required
                        style="max-width: 500px; font-size: 1.75rem; font-weight: 500;">
@@ -67,12 +81,31 @@
                             <!-- Разделитель -->
                             <div class="vr" style="height: 50px;"></div>
                             
-                            <!-- Ссылка на сайт -->
+                            <!-- Ссылка на сайт - inline редактирование -->
                             <div class="flex-grow-1">
                                 <small class="text-muted d-block mb-1">🌐 Сайт банка</small>
-                                <div class="input-group">
-                                    <input type="text" x-model="loan.website" class="form-control" 
-                                           required placeholder="https://example.com">
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Режим просмотра -->
+                                    <div x-show="!editingWebsite" 
+                                         @click="editingWebsite = true; $nextTick(() => $refs.websiteInput.focus())"
+                                         class="flex-grow-1"
+                                         style="cursor: pointer;">
+                                        <span class="text-primary" 
+                                              style="text-decoration: underline; text-decoration-style: dotted; font-size: 1.1rem;"
+                                              x-text="loan.website || 'Добавить ссылку...'"></span>
+                                    </div>
+                                    <!-- Режим редактирования -->
+                                    <input x-show="editingWebsite" 
+                                           x-ref="websiteInput"
+                                           type="text" 
+                                           x-model="loan.website" 
+                                           @blur="editingWebsite = false"
+                                           @keydown.enter="editingWebsite = false; $event.target.blur()"
+                                           @keydown.escape="editingWebsite = false; $event.target.blur()"
+                                           class="form-control flex-grow-1" 
+                                           required 
+                                           placeholder="https://example.com">
+                                    <!-- Кнопка открыть -->
                                     <button type="button" class="btn btn-outline-primary" 
                                             @click="window.open(loan.website, '_blank')" 
                                             :disabled="!loan.website">
@@ -250,6 +283,8 @@ function loanEditor() {
         loanId: null,
         saving: false,
         deleting: false,
+        editingBankName: false,
+        editingWebsite: false,
         loan: {
             org_name: '',
             website: '',
