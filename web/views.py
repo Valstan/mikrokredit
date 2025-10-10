@@ -452,7 +452,10 @@ def delete_loan_route(loan_id: int):
 @login_required
 def loan_new_v2():
     """Новый интерфейс создания займа"""
-    return render_template("loan_edit_v2.html", loan=None, installments_json="[]")
+    return render_template("loan_edit_v2.html", 
+                         loan_json="null", 
+                         installments_json="[]",
+                         is_edit=False)
 
 
 @bp.route("/loan/<int:loan_id>/v2", methods=["GET"])
@@ -466,7 +469,7 @@ def loan_edit_v2(loan_id: int):
             return redirect(url_for("views.loans_index"))
         
         # Извлекаем данные в словарь
-        loan_dict = {
+        loan_json = json.dumps({
             'id': loan_orm.id,
             'org_name': loan_orm.org_name or '',
             'website': loan_orm.website or '',
@@ -480,7 +483,7 @@ def loan_edit_v2(loan_id: int):
             'loan_type': loan_orm.loan_type or 'single',
             'category': loan_orm.category or 'microloan',
             'interest_rate': float(loan_orm.interest_rate or 0)
-        }
+        })
         
         # Получаем installments
         insts = session.execute(
@@ -497,16 +500,11 @@ def loan_edit_v2(loan_id: int):
             'paid': bool(inst.paid),
             'paid_date': inst.paid_date
         } for inst in insts])
-    
-    # Создаём простой объект для шаблона
-    class LoanData:
-        pass
-    
-    loan = LoanData()
-    for key, value in loan_dict.items():
-        setattr(loan, key, value)
         
-    return render_template("loan_edit_v2.html", loan=loan, installments_json=installments_json)
+    return render_template("loan_edit_v2.html", 
+                         loan_json=loan_json, 
+                         installments_json=installments_json,
+                         is_edit=True)
 
 
 @bp.route("/loan/new/save", methods=["POST"])

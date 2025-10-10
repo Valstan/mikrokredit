@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div x-data="loanEditor({{ loan.id if loan else 'null' }}, {{ installments_json|safe if loan else '[]' }})" x-init="init()">
+<div x-data="loanEditor({{ loan_json|safe }}, {{ installments_json|safe }})" x-init="init()">
     <!-- Заголовок -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0">
@@ -302,33 +302,30 @@
 </div>
 
 <script>
-function loanEditor(existingLoanId, existingInstallments) {
+function loanEditor(loanData, installmentsData) {
     return {
-        loanId: existingLoanId,
+        loanId: loanData ? loanData.id : null,
         saving: false,
         deleting: false,
-        loan: {
-            org_name: {% if loan %}'{{ loan.org_name | replace("'", "\\'") }}'{% else %}''{% endif %},
-            website: {% if loan %}'{{ loan.website | replace("'", "\\'") }}'{% else %}''{% endif %},
-            loan_date: {% if loan %}'{{ loan.loan_date }}'{% else %}''{% endif %},
-            amount_borrowed: {% if loan %}{{ loan.amount_borrowed }}{% else %}0{% endif %},
-            amount_due: {% if loan %}{{ loan.amount_due }}{% else %}0{% endif %},
-            due_date: {% if loan %}'{{ loan.due_date }}'{% else %}''{% endif %},
-            risky_org: {% if loan %}{{ 'true' if loan.risky_org else 'false' }}{% else %}false{% endif %},
-            notes: {% if loan %}`{{ loan.notes | replace("`", "\\`") | replace("${", "\\${") }}`{% else %}``{% endif %},
-            payment_methods: {% if loan %}`{{ loan.payment_methods | replace("`", "\\`") | replace("${", "\\${") }}`{% else %}``{% endif %},
-            loan_type: {% if loan %}'{{ loan.loan_type }}'{% else %}'single'{% endif %},
-            category: {% if loan %}'{{ loan.category }}'{% else %}'microloan'{% endif %},
-            interest_rate: {% if loan %}{{ loan.interest_rate }}{% else %}0{% endif %}
+        loan: loanData || {
+            org_name: '',
+            website: '',
+            loan_date: new Date().toISOString().split('T')[0],
+            amount_borrowed: 0,
+            amount_due: 0,
+            due_date: '',
+            risky_org: false,
+            notes: '',
+            payment_methods: '',
+            loan_type: 'single',
+            category: 'microloan',
+            interest_rate: 0
         },
-        installments: existingInstallments || [],
+        installments: installmentsData || [],
 
         init() {
+            console.log('Loan editor initialized', this.loanId, this.loan, this.installments);
             this.calculateTotals();
-            // Устанавливаем дату по умолчанию
-            if (!this.loan.loan_date) {
-                this.loan.loan_date = new Date().toISOString().split('T')[0];
-            }
         },
 
         handleTypeChange() {
