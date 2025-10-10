@@ -12,6 +12,7 @@ from app.models_sa import (
     TaskORM, TaskCategoryORM, SubtaskORM, TaskReminderORM, ReminderTemplateORM,
     TaskScheduleORM, ReminderRuleORM
 )
+from app.reminder_generator import regenerate_task_reminders
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
@@ -425,6 +426,13 @@ def new_v2():
                 
                 session.commit()
                 
+                # Генерируем напоминания
+                try:
+                    reminders_count = regenerate_task_reminders(task.id)
+                    print(f"✅ Создано {reminders_count} напоминаний для задачи {task.id}")
+                except Exception as e:
+                    print(f"⚠️ Ошибка генерации напоминаний: {e}")
+                
                 return jsonify({'success': True, 'task_id': task.id})
         
         except Exception as e:
@@ -520,6 +528,13 @@ def edit_v2(task_id):
                     session.add(rule)
                 
                 session.commit()
+                
+                # Регенерируем напоминания
+                try:
+                    reminders_count = regenerate_task_reminders(task.id)
+                    print(f"✅ Обновлено {reminders_count} напоминаний для задачи {task.id}")
+                except Exception as e:
+                    print(f"⚠️ Ошибка генерации напоминаний: {e}")
                 
                 return jsonify({'success': True})
         
