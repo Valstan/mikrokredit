@@ -25,7 +25,7 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 TELEGRAM_CHAT_ID = str(TELEGRAM_CHAT_ID)
 
 # Настройки уведомлений
-DAYS_BEFORE_DUE = 5  # Уведомлять за 5 дней и менее (как на dashboard)
+DAYS_BEFORE_DUE = 2  # Уведомлять за 2 дня и менее для Telegram
 
 
 def send_telegram_message(text: str) -> bool:
@@ -55,9 +55,9 @@ def get_urgent_loans() -> List[dict]:
     threshold_date = today + timedelta(days=DAYS_BEFORE_DUE)
     
     with get_session() as session:
-        # Получаем все неоплаченные займы
+        # Получаем ВСЕ займы (даже с is_paid=1, т.к. флаг может быть несинхронизирован)
         loans = session.execute(
-            select(LoanORM).where(LoanORM.is_paid == 0)
+            select(LoanORM)
         ).scalars().all()
         
         for loan in loans:
@@ -69,49 +69,70 @@ def get_urgent_loans() -> List[dict]:
                 'amount_due': loan.amount_due,
                 'due_date': loan.due_date
             }
-            # Проверяем ближайший неоплаченный платеж
-            next_payment = session.execute(
-                select(InstallmentORM)
+            
+            # Проверяем есть ли платежи вообще и сколько неоплаченных
+            total_count = session.execute(
+                select(func.count(InstallmentORM.id))
+                .where(InstallmentORM.loan_id == loan.id)
+            ).scalar()
+            
+            unpaid_count = session.execute(
+                select(func.count(InstallmentORM.id))
                 .where(
                     InstallmentORM.loan_id == loan.id,
                     InstallmentORM.paid == 0
                 )
-                .order_by(InstallmentORM.due_date.asc())
-                .limit(1)
-            ).scalar_one_or_none()
+            ).scalar()
             
-            if next_payment:
-                # Есть платеж по рассрочке
-                try:
-                    payment_date = date.fromisoformat(next_payment.due_date)
-                    days_left = (payment_date - today).days
-                    
-                    if days_left <= DAYS_BEFORE_DUE:
-                        urgent_loans.append({
-                            'org_name': loan_data['org_name'],
-                            'website': loan_data['website'],
-                            'due_date': next_payment.due_date,
-                            'amount': next_payment.amount,
-                            'days_left': days_left
-                        })
-                except ValueError:
-                    pass  # Неверный формат даты
+            # Если есть неоплаченные платежи - проверяем ближайший
+            if unpaid_count > 0:
+                next_payment = session.execute(
+                    select(InstallmentORM)
+                    .where(
+                        InstallmentORM.loan_id == loan.id,
+                        InstallmentORM.paid == 0
+                    )
+                    .order_by(InstallmentORM.due_date.asc())
+                    .limit(1)
+                ).scalar_one_or_none()
+                
+                if next_payment:
+                    try:
+                        payment_date = date.fromisoformat(next_payment.due_date)
+                        days_left = (payment_date - today).days
+                        
+                        if days_left <= DAYS_BEFORE_DUE:
+                            urgent_loans.append({
+                                'org_name': loan_data['org_name'],
+                                'website': loan_data['website'],
+                                'due_date': next_payment.due_date,
+                                'amount': next_payment.amount,
+                                'days_left': days_left
+                            })
+                    except ValueError:
+                        pass  # Неверный формат даты
             else:
-                # Нет платежей по рассрочке, проверяем основной срок
-                try:
-                    loan_due_date = date.fromisoformat(loan_data['due_date'])
-                    days_left = (loan_due_date - today).days
-                    
-                    if days_left <= DAYS_BEFORE_DUE and loan_data['amount_due'] > 0:
-                        urgent_loans.append({
-                            'org_name': loan_data['org_name'],
-                            'website': loan_data['website'],
-                            'due_date': loan_data['due_date'],
-                            'amount': loan_data['amount_due'],
-                            'days_left': days_left
-                        })
-                except ValueError:
-                    pass  # Неверный формат даты
+                # Нет неоплаченных платежей по рассрочке
+                # Если есть платежи и все оплачены - займ считается оплаченным
+                if total_count > 0:
+                    continue  # Все платежи оплачены, пропускаем
+                
+                # Нет платежей вообще - проверяем основной займ только если is_paid=0
+                if loan.is_paid == 0:
+                    try:
+                        loan_due_date = date.fromisoformat(loan_data['due_date'])
+                        days_left = (loan_due_date - today).days
+                        
+                        if days_left <= DAYS_BEFORE_DUE and loan_data['amount_due'] > 0:
+                            urgent_loans.append({
+                                'org_name': loan_data['org_name'],
+                                'website': loan_data['website'],
+                                'due_date': loan_data['due_date'],
+                                'amount': loan_data['amount_due'],
+                                'days_left': days_left
+                            })
+                    except ValueError:
+                        pass  # Неверный формат даты
     
     # Сортируем по количеству оставшихся дней
     urgent_loans.sort(key=lambda x: x['days_left'])
