@@ -460,15 +460,32 @@ def loan_new_v2():
 def loan_edit_v2(loan_id: int):
     """Новый интерфейс редактирования займа"""
     with get_session() as session:
-        loan = session.get(LoanORM, loan_id)
-        if loan is None:
+        loan_orm = session.get(LoanORM, loan_id)
+        if loan_orm is None:
             flash("Займ не найден", "error")
             return redirect(url_for("views.loans_index"))
+        
+        # Извлекаем данные в словарь
+        loan_dict = {
+            'id': loan_orm.id,
+            'org_name': loan_orm.org_name or '',
+            'website': loan_orm.website or '',
+            'loan_date': loan_orm.loan_date or '',
+            'amount_borrowed': float(loan_orm.amount_borrowed or 0),
+            'amount_due': float(loan_orm.amount_due or 0),
+            'due_date': loan_orm.due_date or '',
+            'risky_org': bool(loan_orm.risky_org),
+            'notes': loan_orm.notes or '',
+            'payment_methods': loan_orm.payment_methods or '',
+            'loan_type': loan_orm.loan_type or 'single',
+            'category': loan_orm.category or 'microloan',
+            'interest_rate': float(loan_orm.interest_rate or 0)
+        }
         
         # Получаем installments
         insts = session.execute(
             select(InstallmentORM)
-            .where(InstallmentORM.loan_id == loan.id)
+            .where(InstallmentORM.loan_id == loan_orm.id)
             .order_by(InstallmentORM.due_date.asc())
         ).scalars().all()
         
@@ -480,8 +497,16 @@ def loan_edit_v2(loan_id: int):
             'paid': bool(inst.paid),
             'paid_date': inst.paid_date
         } for inst in insts])
+    
+    # Создаём простой объект для шаблона
+    class LoanData:
+        pass
+    
+    loan = LoanData()
+    for key, value in loan_dict.items():
+        setattr(loan, key, value)
         
-        return render_template("loan_edit_v2.html", loan=loan, installments_json=installments_json)
+    return render_template("loan_edit_v2.html", loan=loan, installments_json=installments_json)
 
 
 @bp.route("/loan/new/save", methods=["POST"])
