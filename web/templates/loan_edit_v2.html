@@ -121,14 +121,9 @@
             <div class="card shadow-sm mt-3">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📊 График платежей</h5>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-light" @click="showTemplateModal = true">
-                            ⚡ Шаблоны
-                        </button>
-                        <button type="button" class="btn btn-sm btn-light" @click="addInstallment">
-                            ➕ Добавить платёж
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-light" @click="addInstallment">
+                        ➕ Добавить платёж
+                    </button>
                 </div>
                 <div class="card-body">
                     <!-- Таблица платежей -->
@@ -304,45 +299,6 @@
         </div>
     </form>
 
-    <!-- Модальное окно шаблонов -->
-    <div x-show="showTemplateModal" class="modal fade show d-block" tabindex="-1" 
-         style="background: rgba(0,0,0,0.5);" @click.self="showTemplateModal = false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">⚡ Шаблоны графика платежей</h5>
-                    <button type="button" class="btn-close" @click="showTemplateModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Количество платежей:</label>
-                        <input type="number" x-model.number="templateParams.count" 
-                               class="form-control" min="2" max="52" value="6">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Первый платёж:</label>
-                        <input type="date" x-model="templateParams.startDate" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Сумма каждого платежа:</label>
-                        <input type="number" step="0.01" x-model.number="templateParams.amount" 
-                               class="form-control" placeholder="0.00">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary" @click="applyTemplate('weekly')">
-                            📅 Еженедельно
-                        </button>
-                        <button class="btn btn-primary" @click="applyTemplate('biweekly')">
-                            📅 Раз в 2 недели
-                        </button>
-                        <button class="btn btn-primary" @click="applyTemplate('monthly')">
-                            📅 Ежемесячно
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -351,7 +307,6 @@ function loanEditor(existingLoanId, existingInstallments) {
         loanId: existingLoanId,
         saving: false,
         deleting: false,
-        showTemplateModal: false,
         loan: {
             org_name: '{{ loan.org_name if loan else "" }}',
             website: '{{ loan.website if loan else "" }}',
@@ -367,11 +322,6 @@ function loanEditor(existingLoanId, existingInstallments) {
             interest_rate: {{ loan.interest_rate if loan else 0 }}
         },
         installments: existingInstallments || [],
-        templateParams: {
-            count: 6,
-            startDate: new Date().toISOString().split('T')[0],
-            amount: 0
-        },
 
         init() {
             this.calculateTotals();
@@ -417,37 +367,6 @@ function loanEditor(existingLoanId, existingInstallments) {
             } else if (!inst.paid) {
                 inst.paid_date = null;
             }
-            this.calculateTotals();
-        },
-
-        applyTemplate(type) {
-            const count = this.templateParams.count;
-            const startDate = new Date(this.templateParams.startDate);
-            const amount = this.templateParams.amount;
-
-            this.installments = [];
-            
-            for (let i = 0; i < count; i++) {
-                let paymentDate = new Date(startDate);
-                
-                if (type === 'weekly') {
-                    paymentDate.setDate(startDate.getDate() + (i * 7));
-                } else if (type === 'biweekly') {
-                    paymentDate.setDate(startDate.getDate() + (i * 14));
-                } else if (type === 'monthly') {
-                    paymentDate.setMonth(startDate.getMonth() + i);
-                }
-                
-                this.installments.push({
-                    due_date: paymentDate.toISOString().split('T')[0],
-                    amount: amount,
-                    paid: false,
-                    paid_date: null,
-                    id: null
-                });
-            }
-            
-            this.showTemplateModal = false;
             this.calculateTotals();
         },
 
