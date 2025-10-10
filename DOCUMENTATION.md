@@ -23,7 +23,7 @@
 
 ```
 URL:     http://73269587c9af.vps.myjino.ru/
-Пароль:  Nitro@1941
+Пароль:  [см. .env файл]
 ```
 
 **Первый вход:**
@@ -115,7 +115,7 @@ Internet → Nginx:80 → Gunicorn:8002 → Flask App
 Host:     localhost:5432
 Database: mikrokredit
 User:     mikrokredit_user
-Password: mikrokredit_pass_2024
+Password: [см. .env файл]
 ```
 
 ### Таблицы:
@@ -251,8 +251,8 @@ if next_payment:
 ### Конфигурация:
 ```
 Бот:        @valstanbot
-Token:      489021673:AAH7QDGmqzOMgT0W_wINvzWC1ihfljuFAKI
-Chat ID:    352096813
+Token:      [см. .env файл - TELEGRAM_BOT_TOKEN]
+Chat ID:    [см. .env файл - TELEGRAM_CHAT_ID]
 ```
 
 ### Компоненты:
@@ -316,7 +316,7 @@ Chat ID:    352096813
 ## 🔐 Аутентификация
 
 ### Параметры:
-- **Пароль:** Nitro@1941 (фиксированный)
+- **Пароль:** [см. .env - AUTH_PASSWORD] (фиксированный)
 - **Попытки:** 3
 - **Блокировка:** 5 минут по IP
 - **Cookie:** 30 дней
@@ -400,7 +400,7 @@ grep CRON /var/log/syslog | tail    # Логи запусков
 
 # Восстановление
 gunzip mikrokredit_*.sql.gz
-export PGPASSWORD="mikrokredit_pass_2024"
+export PGPASSWORD="[см. .env - DB_PASSWORD]"
 psql -U mikrokredit_user -d mikrokredit -h localhost < backup.sql
 ```
 
@@ -607,10 +607,10 @@ Dashboard показывает:
 ### Секреты:
 
 **НЕ коммитить в Git:**
-- Auth password: Nitro@1941
-- Telegram token: 489021673:AAH7QDGmqzOMgT0W_wINvzWC1ihfljuFAKI
-- DB password: mikrokredit_pass_2024
-- Yandex token: y0__xDR8Z0KGNuWAyCFzMykFJz31O8WoqV9ONfVuMNLNIyjYsZK
+- Auth password: [см. .env - AUTH_PASSWORD]
+- Telegram token: [см. .env файл - TELEGRAM_BOT_TOKEN]
+- DB password: [см. .env - DB_PASSWORD]
+- Yandex token: [см. .env файл - YANDEX_DISK_TOKEN]
 
 ### Изменяемые параметры:
 
@@ -689,7 +689,7 @@ crontab -l
 date +%H
 
 # 3. Есть ли напоминания в БД?
-export PGPASSWORD="mikrokredit_pass_2024"
+export PGPASSWORD="[см. .env - DB_PASSWORD]"
 psql -U mikrokredit_user -d mikrokredit -h localhost -c \
   "SELECT * FROM task_reminders WHERE sent = 0;"
 
@@ -874,7 +874,7 @@ HAVING MIN(i.due_date) < CURRENT_DATE + INTERVAL '5 days';
 Host:     localhost:5432
 Database: mikrokredit
 User:     mikrokredit_user
-Password: mikrokredit_pass_2024
+Password: [см. .env файл]
 ```
 
 ### Gunicorn (gunicorn.conf.py):
@@ -910,7 +910,7 @@ ps aux | grep gunicorn | grep mikrokredit
 ps aux | grep telegram_bot_server
 
 # === БАЗА ДАННЫХ ===
-export PGPASSWORD="mikrokredit_pass_2024"
+export PGPASSWORD="[см. .env - DB_PASSWORD]"
 psql -U mikrokredit_user -d mikrokredit -h localhost -c "\dt"
 
 # === CRON ===
@@ -950,7 +950,7 @@ ps aux | grep -E "(gunicorn|telegram)"
 
 ```bash
 # Проверка подключения
-export PGPASSWORD="mikrokredit_pass_2024"
+export PGPASSWORD="[см. .env - DB_PASSWORD]"
 psql -U mikrokredit_user -d mikrokredit -h localhost -c "SELECT 1;"
 
 # Исправление sequences
@@ -968,7 +968,7 @@ sudo systemctl restart postgresql
 
 # Восстановить
 gunzip mikrokredit_*.sql.gz
-export PGPASSWORD="mikrokredit_pass_2024"
+export PGPASSWORD="[см. .env - DB_PASSWORD]"
 psql -U mikrokredit_user -d mikrokredit -h localhost < backup.sql
 
 # Исправить sequences
@@ -989,7 +989,7 @@ psql -U mikrokredit_user -d mikrokredit -h localhost < backup.sql
 
 **Telegram:**
 - Бот: @valstanbot
-- Chat ID: 352096813
+- Chat ID: [см. .env файл - TELEGRAM_CHAT_ID]
 
 **Поддержка:**
 - Вся информация в этом файле

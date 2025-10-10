@@ -16,12 +16,13 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from app.db_sa import get_session
 from app.models_sa import LoanORM, InstallmentORM
+from app.secrets import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, WEB_URL
 from sqlalchemy import select, func
 
 # Конфигурация Telegram
-TELEGRAM_TOKEN = "489021673:AAH7QDGmqzOMgT0W_wINvzWC1ihfljuFAKI"
-TELEGRAM_CHAT_ID = "352096813"
+TELEGRAM_TOKEN = TELEGRAM_BOT_TOKEN
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+TELEGRAM_CHAT_ID = str(TELEGRAM_CHAT_ID)
 
 # Настройки уведомлений
 DAYS_BEFORE_DUE = 2  # Уведомлять за 2 дня и менее

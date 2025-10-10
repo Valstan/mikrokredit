@@ -5,15 +5,23 @@
 
 set -e
 
-# Конфигурация
-BACKUP_DIR="/home/valstan/mikrokredit/backups"
-DB_NAME="mikrokredit"
-DB_USER="mikrokredit_user"
-DB_HOST="localhost"
-export PGPASSWORD="mikrokredit_pass_2024"
+# Загружаем переменные из .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Яндекс.Диск настройки
-YANDEX_TOKEN="y0__xDR8Z0KGNuWAyCFzMykFJz31O8WoqV9ONfVuMNLNIyjYsZK"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
+# Конфигурация (из .env)
+BACKUP_DIR="/home/valstan/mikrokredit/backups"
+DB_NAME="${DB_NAME:-mikrokredit}"
+DB_USER="${DB_USER:-mikrokredit_user}"
+DB_HOST="${DB_HOST:-localhost}"
+export PGPASSWORD="${DB_PASSWORD}"
+
+# Яндекс.Диск настройки (из .env)
+YANDEX_TOKEN="${YANDEX_DISK_TOKEN}"
 YANDEX_FOLDER="/МикроКредит_Backups"  # Папка на Яндекс.Диске
 MAX_BACKUPS=10  # Максимальное количество бэкапов
 

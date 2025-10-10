@@ -18,16 +18,14 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from app.db_sa import get_session
 from app.models_sa import TaskORM, TaskReminderORM
+from app.secrets import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, WEB_URL, BOT_WORK_HOURS_START, BOT_WORK_HOURS_END
 from sqlalchemy import select
 
 # Конфигурация
-TELEGRAM_TOKEN = "489021673:AAH7QDGmqzOMgT0W_wINvzWC1ihfljuFAKI"
-TELEGRAM_CHAT_ID = 352096813
-WEB_URL = "http://73269587c9af.vps.myjino.ru"
+TELEGRAM_TOKEN = TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID = int(TELEGRAM_CHAT_ID)
 
 REPEAT_INTERVAL_MINUTES = 15
-BOT_WORK_HOURS_START = 7
-BOT_WORK_HOURS_END = 22
 
 
 def is_work_hours() -> bool:

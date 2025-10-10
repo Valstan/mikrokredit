@@ -10,8 +10,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.models_sa import Base, LoanORM, InstallmentORM
 
 # PostgreSQL connection strings
-RENDER_POSTGRES_URL = "postgresql://mikrokredit_user:6xoKkR0wfL1Zc0YcmqcE4GSjBSXlQ8Rv@dpg-d308623e5dus73dfrrsg-a.oregon-postgres.render.com/mikrokredit"
-LOCAL_POSTGRES_URL = "postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5434/mikrokredit_db"
+# ВНИМАНИЕ: Этот скрипт для старой миграции, сейчас используется secrets.py
+RENDER_POSTGRES_URL = "postgresql://user:pass@host/db"  # Устаревший, не используется
+LOCAL_POSTGRES_URL = "postgresql://user:pass@localhost:5434/db"  # Устаревший, не используется
 
 
 def migrate_from_render_to_local_postgres() -> None:

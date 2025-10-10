@@ -2,7 +2,15 @@
 # Скачивание бэкапа с Яндекс.Диска
 # Публичная папка: https://yadi.sk/d/gVpI3Fst7J5EIw
 
-YANDEX_TOKEN="y0__xDR8Z0KGNuWAyCFzMykFJz31O8WoqV9ONfVuMNLNIyjYsZK"
+# Загружаем переменные из .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
+YANDEX_TOKEN="${YANDEX_DISK_TOKEN}"
 YANDEX_FOLDER="/МикроКредит_Backups"
 
 # Если не указан файл - показываем список
@@ -63,7 +71,7 @@ if curl -# -L "$DOWNLOAD_URL" -o "$BACKUP_FILE"; then
     echo ""
     echo "Для восстановления:"
     echo "  1. gunzip $BACKUP_FILE"
-    echo "  2. export PGPASSWORD='mikrokredit_pass_2024'"
+    echo "  2. export PGPASSWORD='YOUR_DB_PASSWORD'  # из .env файла"
     echo "  3. psql -U mikrokredit_user -h localhost -d mikrokredit < ${BACKUP_FILE%.gz}"
 else
     echo "✗ Ошибка скачивания"

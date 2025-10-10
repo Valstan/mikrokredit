@@ -53,3 +53,15 @@ old/
 # Временные
 tmp/
 temp/
+
+# Секреты и конфиденциальные данные
+.env
+.env.local
+.env.*.local
+config_secure.py
+secrets.py.local
+
+# Бэкапы (содержат данные)
+backups/*.sql
+backups/*.sql.gz
+*.bak

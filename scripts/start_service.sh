@@ -17,8 +17,15 @@ if ! systemctl is-active --quiet postgresql; then
     exit 1
 fi
 
-# Устанавливаем переменную окружения для базы данных
-export MIKROKREDIT_DATABASE_URL="postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5432/mikrokredit"
+# Загружаем переменные из .env
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Устанавливаем переменную окружения для базы данных (если не задана)
+if [ -z "$MIKROKREDIT_DATABASE_URL" ]; then
+    export MIKROKREDIT_DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+fi
 
 # Запускаем Gunicorn
 echo "Запускаем Gunicorn..."

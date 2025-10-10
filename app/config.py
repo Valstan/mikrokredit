@@ -5,8 +5,13 @@
 import os
 from pathlib import Path
 
-# База данных по умолчанию - PostgreSQL на сервере
-DEFAULT_DATABASE_URL = "postgresql://mikrokredit_user:mikrokredit_pass_2024@localhost:5432/mikrokredit"
+# База данных - импортируем из secrets
+try:
+    from app.secrets import DATABASE_URL as SECRETS_DATABASE_URL
+    DEFAULT_DATABASE_URL = SECRETS_DATABASE_URL
+except ImportError:
+    # Fallback если secrets.py недоступен (не должно случиться)
+    DEFAULT_DATABASE_URL = "postgresql://user:pass@localhost:5432/mikrokredit"
 
 # Получаем URL базы данных из переменной окружения или используем по умолчанию
 DATABASE_URL = os.environ.get("MIKROKREDIT_DATABASE_URL", DEFAULT_DATABASE_URL)

@@ -3,10 +3,18 @@
 
 set -e
 
+# Загружаем переменные из .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
 echo "🔧 Синхронизация PostgreSQL sequences..."
 
-export PGPASSWORD="mikrokredit_pass_2024"
-PGUSER="mikrokredit_user"
+export PGPASSWORD="${DB_PASSWORD}"
+PGUSER="${DB_USER:-mikrokredit_user}"
 PGHOST="localhost"
 PGDB="mikrokredit"
 

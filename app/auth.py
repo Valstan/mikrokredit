@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import session, request, redirect, url_for, flash
 from typing import Dict, List
+from app.secrets import AUTH_PASSWORD
 
 # Конфигурация
-AUTH_PASSWORD = "Nitro@1941"
 MAX_ATTEMPTS = 3
 BLOCK_DURATION_MINUTES = 5
 

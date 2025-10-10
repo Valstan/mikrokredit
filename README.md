@@ -13,7 +13,7 @@
 
 **Веб-интерфейс:**
 - 🌐 URL: http://73269587c9af.vps.myjino.ru/
-- 🔐 Пароль: `Nitro@1941`
+- 🔐 Пароль: `[см. .env - AUTH_PASSWORD]`
 
 **Telegram:**
 - 🤖 Бот: [@valstanbot](https://t.me/valstanbot)
@@ -169,13 +169,13 @@ Cron задач:         4
 Host:     localhost:5432
 Database: mikrokredit
 User:     mikrokredit_user
-Password: mikrokredit_pass_2024
+Password: [см. .env - DB_PASSWORD]
 ```
 
 ### Telegram:
 ```
 Bot:      @valstanbot
-Token:    489021673:AAH7QDGmqzOMgT0W_wINvzWC1ihfljuFAKI
+Token:    [см. .env - TELEGRAM_BOT_TOKEN]
 Chat ID:  352096813
 ```
 
