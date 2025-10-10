@@ -9,39 +9,27 @@
     
     <!-- Заголовок с редактируемым названием банка -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="flex-grow-1">
-            <!-- Новый займ -->
-            <div x-show="!loanId" class="d-flex align-items-center gap-2">
-                <span class="h3 mb-0">💳</span>
-                <input type="text" x-model="loan.org_name" 
-                       class="form-control form-control-lg border-2 h3 mb-0"
-                       placeholder="Название банка"
-                       required
-                       style="max-width: 500px; font-size: 1.75rem; font-weight: 500;">
-            </div>
-            <!-- Редактирование займа - inline редактирование названия -->
-            <div x-show="loanId" class="d-flex align-items-center gap-2">
-                <span class="h3 mb-0">🏦</span>
-                <!-- Режим просмотра -->
-                <h3 x-show="!editingBankName" 
-                    @click="editingBankName = true; $nextTick(() => $refs.bankNameInput.focus())"
-                    class="mb-0 text-primary"
-                    style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">
-                    <span x-text="loan.org_name || 'Название банка'"></span>
-                </h3>
-                <!-- Режим редактирования -->
-                <input x-show="editingBankName" 
-                       x-ref="bankNameInput"
-                       type="text" 
-                       x-model="loan.org_name" 
-                       @blur="editingBankName = false"
-                       @keydown.enter="editingBankName = false; $event.target.blur()"
-                       @keydown.escape="editingBankName = false; $event.target.blur()"
-                       class="form-control form-control-lg border-2 h3 mb-0"
-                       placeholder="Название банка"
-                       required
-                       style="max-width: 500px; font-size: 1.75rem; font-weight: 500;">
-            </div>
+        <div class="flex-grow-1 d-flex align-items-center gap-2">
+            <span class="h3 mb-0">🏦</span>
+            <!-- Режим просмотра -->
+            <h3 x-show="!editingBankName" 
+                @click="editingBankName = true; $nextTick(() => $refs.bankNameInput.focus())"
+                class="mb-0 text-primary"
+                style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">
+                <span x-text="loan.org_name || 'Название банка'"></span>
+            </h3>
+            <!-- Режим редактирования -->
+            <input x-show="editingBankName" 
+                   x-ref="bankNameInput"
+                   type="text" 
+                   x-model="loan.org_name" 
+                   @blur="editingBankName = false"
+                   @keydown.enter="editingBankName = false; $event.target.blur()"
+                   @keydown.escape="editingBankName = false; $event.target.blur()"
+                   class="form-control form-control-lg border-2 h3 mb-0"
+                   placeholder="Название банка"
+                   required
+                   style="max-width: 500px; font-size: 1.75rem; font-weight: 500;">
         </div>
         <div>
             <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/loans'">
