@@ -30,7 +30,7 @@ def send_pending_reminders():
         # Находим неотправленные напоминания, время которых наступило
         reminders = session.execute(
             select(TaskReminderORM).where(
-                TaskReminderORM.sent == 0,
+                TaskReminderORM.sent == False,
                 TaskReminderORM.reminder_time >= time_window_start,
                 TaskReminderORM.reminder_time <= time_window_end
             ).order_by(TaskReminderORM.reminder_time.asc())

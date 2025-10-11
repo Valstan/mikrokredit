@@ -15,13 +15,13 @@ class ReminderGenerator:
     """Генератор напоминаний из правил"""
     
     @staticmethod
-    def generate_reminders_for_task(task_id: int, days_ahead: int = 14) -> int:
+    def generate_reminders_for_task(task_id: int, days_ahead: int = 1) -> int:
         """
         Генерирует напоминания для задачи на следующие N дней
         
         Args:
             task_id: ID задачи
-            days_ahead: На сколько дней вперед генерировать
+            days_ahead: На сколько дней вперед генерировать (по умолчанию 1 день)
             
         Returns:
             Количество созданных напоминаний
@@ -36,7 +36,7 @@ class ReminderGenerator:
             old_reminders = session.execute(
                 select(TaskReminderORM).where(
                     TaskReminderORM.task_id == task_id,
-                    TaskReminderORM.sent == 0,
+                    TaskReminderORM.sent == False,
                     TaskReminderORM.reminder_time >= now
                 )
             ).scalars().all()
@@ -76,7 +76,7 @@ class ReminderGenerator:
         rules = session.execute(
             select(ReminderRuleORM).where(
                 ReminderRuleORM.task_id == task.id,
-                ReminderRuleORM.is_active == 1
+                ReminderRuleORM.is_active == True
             ).order_by(ReminderRuleORM.order_index)
         ).scalars().all()
         
@@ -90,7 +90,7 @@ class ReminderGenerator:
                     reminder = TaskReminderORM(
                         task_id=task.id,
                         reminder_time=reminder_time.isoformat(),
-                        sent=0,
+                        sent=False,
                         created_at=datetime.now().isoformat()
                     )
                     session.add(reminder)
@@ -113,7 +113,7 @@ class ReminderGenerator:
         schedules = session.execute(
             select(TaskScheduleORM).where(
                 TaskScheduleORM.task_id == task.id,
-                TaskScheduleORM.is_active == 1
+                    TaskScheduleORM.is_active == True
             )
         ).scalars().all()
         
@@ -124,7 +124,7 @@ class ReminderGenerator:
         rules = session.execute(
             select(ReminderRuleORM).where(
                 ReminderRuleORM.task_id == task.id,
-                ReminderRuleORM.is_active == 1
+                ReminderRuleORM.is_active == True
             ).order_by(ReminderRuleORM.order_index)
         ).scalars().all()
         
@@ -166,7 +166,7 @@ class ReminderGenerator:
                         reminder = TaskReminderORM(
                             task_id=task.id,
                             reminder_time=reminder_time.isoformat(),
-                            sent=0,
+                            sent=False,
                             created_at=datetime.now().isoformat()
                         )
                         session.add(reminder)
@@ -188,11 +188,11 @@ class ReminderGenerator:
         """
         reminders = []
         
-        if rule.rule_type == 'before_start':
-            # За X минут до начала
-            if rule.offset_minutes:
-                reminder_time = start_datetime - timedelta(minutes=rule.offset_minutes)
-                reminders.append(reminder_time)
+        if rule.rule_type == 'before_start' or rule.rule_type == 'at_start':
+            # За X минут до начала (или в момент начала если offset = 0)
+            offset = rule.offset_minutes if rule.offset_minutes is not None else 0
+            reminder_time = start_datetime - timedelta(minutes=offset)
+            reminders.append(reminder_time)
         
         elif rule.rule_type == 'before_end':
             # За X минут до конца
@@ -270,7 +270,7 @@ class ReminderGenerator:
         return datetime.combine(d, time_obj)
     
     @staticmethod
-    def regenerate_all_tasks_reminders(days_ahead: int = 14) -> Dict[str, int]:
+    def regenerate_all_tasks_reminders(days_ahead: int = 1) -> Dict[str, int]:
         """
         Регенерирует напоминания для всех активных задач
         

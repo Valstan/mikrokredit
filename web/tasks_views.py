@@ -10,11 +10,18 @@ from app.auth import login_required
 from app.db_sa import get_session
 from app.models_sa import (
     TaskORM, TaskCategoryORM, SubtaskORM, TaskReminderORM, ReminderTemplateORM,
-    TaskScheduleORM, ReminderRuleORM
+    TaskScheduleORM, ReminderRuleORM, ReminderRuleTemplateORM
 )
 from app.reminder_generator import regenerate_task_reminders
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
+
+
+@bp.route('/clear-cache')
+@login_required
+def clear_cache():
+    """Страница для очистки кэша браузера"""
+    return render_template('tasks/clear_cache.html')
 
 
 @bp.route('/')
@@ -92,169 +99,6 @@ def index():
     )
 
 
-@bp.route('/new', methods=['GET', 'POST'])
-@login_required
-def new():
-    """Создание новой задачи"""
-    if request.method == 'POST':
-        try:
-            with get_session() as session:
-                now = datetime.now().isoformat()
-                
-                task = TaskORM(
-                    title=request.form.get('title', ''),
-                    description=request.form.get('description'),
-                    importance=int(request.form.get('importance', 2)),
-                    due_date=request.form.get('due_date') or None,
-                    category_id=int(request.form['category_id']) if request.form.get('category_id') else None,
-                    created_at=now,
-                    updated_at=now
-                )
-                
-                session.add(task)
-                session.flush()  # Получаем ID задачи
-                
-                # Добавляем подзадачи если есть
-                subtasks_data = request.form.getlist('subtask_title[]')
-                for idx, subtask_title in enumerate(subtasks_data):
-                    if subtask_title.strip():
-                        subtask = SubtaskORM(
-                            task_id=task.id,
-                            title=subtask_title.strip(),
-                            order=idx,
-                            created_at=now
-                        )
-                        session.add(subtask)
-                
-                # Применяем шаблон напоминаний если выбран
-                template_id = request.form.get('reminder_template')
-                if template_id and task.due_date:
-                    apply_reminder_template(session, task, int(template_id))
-                
-                # Или добавляем кастомные напоминания
-                reminder_times = request.form.getlist('reminder_time[]')
-                for reminder_time in reminder_times:
-                    if reminder_time.strip():
-                        reminder = TaskReminderORM(
-                            task_id=task.id,
-                            reminder_time=reminder_time.strip(),
-                            created_at=now
-                        )
-                        session.add(reminder)
-                
-                session.commit()
-                flash('Задача создана успешно!', 'success')
-                return redirect(url_for('tasks.index'))
-                
-        except Exception as e:
-            flash(f'Ошибка при создании задачи: {e}', 'danger')
-    
-    with get_session() as session:
-        cats_orm = session.execute(select(TaskCategoryORM)).scalars().all()
-        categories = [{'id': c.id, 'name': c.name} for c in cats_orm]
-        
-        temps_orm = session.execute(select(ReminderTemplateORM)).scalars().all()
-        templates = [{'id': t.id, 'name': t.name, 'description': t.description} for t in temps_orm]
-        
-    return render_template('tasks/edit.html', task=None, categories=categories, templates=templates)
-
-
-@bp.route('/<int:task_id>', methods=['GET', 'POST'])
-@login_required
-def edit(task_id: int):
-    """Редактирование задачи"""
-    if request.method == 'POST':
-        try:
-            with get_session() as session:
-                task = session.get(TaskORM, task_id)
-                if not task:
-                    flash('Задача не найдена', 'danger')
-                    return redirect(url_for('tasks.index'))
-                
-                task.title = request.form.get('title', task.title)
-                task.description = request.form.get('description')
-                task.importance = int(request.form.get('importance', task.importance))
-                task.due_date = request.form.get('due_date') or None
-                task.category_id = int(request.form['category_id']) if request.form.get('category_id') else None
-                task.updated_at = datetime.now().isoformat()
-                
-                # Обновляем подзадачи (простая логика - удалить все и создать заново)
-                session.execute(select(SubtaskORM).where(SubtaskORM.task_id == task_id))
-                for subtask in task.subtasks:
-                    session.delete(subtask)
-                
-                subtasks_data = request.form.getlist('subtask_title[]')
-                for idx, subtask_title in enumerate(subtasks_data):
-                    if subtask_title.strip():
-                        subtask = SubtaskORM(
-                            task_id=task.id,
-                            title=subtask_title.strip(),
-                            order=idx,
-                            created_at=datetime.now().isoformat()
-                        )
-                        session.add(subtask)
-                
-                # Обновляем напоминания (удалить неотправленные и создать новые)
-                # Удаляем только неотправленные напоминания
-                old_reminders = session.execute(
-                    select(TaskReminderORM).where(
-                        TaskReminderORM.task_id == task_id,
-                        TaskReminderORM.sent == 0
-                    )
-                ).scalars().all()
-                for reminder in old_reminders:
-                    session.delete(reminder)
-                
-                # Добавляем новые напоминания
-                reminder_times = request.form.getlist('reminder_time[]')
-                now = datetime.now().isoformat()
-                for reminder_time in reminder_times:
-                    if reminder_time.strip():
-                        reminder = TaskReminderORM(
-                            task_id=task.id,
-                            reminder_time=reminder_time.strip(),
-                            created_at=now
-                        )
-                        session.add(reminder)
-                
-                # Или применяем шаблон
-                template_id = request.form.get('reminder_template')
-                if template_id and task.due_date:
-                    apply_reminder_template(session, task, int(template_id))
-                
-                session.commit()
-                flash('Задача обновлена!', 'success')
-                return redirect(url_for('tasks.index'))
-                
-        except Exception as e:
-            flash(f'Ошибка при обновлении: {e}', 'danger')
-    
-    with get_session() as session:
-        task = session.get(TaskORM, task_id)
-        if not task:
-            flash('Задача не найдена', 'danger')
-            return redirect(url_for('tasks.index'))
-        
-        cats_orm = session.execute(select(TaskCategoryORM)).scalars().all()
-        categories = [{'id': c.id, 'name': c.name} for c in cats_orm]
-        
-        temps_orm = session.execute(select(ReminderTemplateORM)).scalars().all()
-        templates = [{'id': t.id, 'name': t.name, 'description': t.description} for t in temps_orm]
-        
-        # Загружаем связанные данные
-        task_data = {
-            'id': task.id,
-            'title': task.title,
-            'description': task.description,
-            'importance': task.importance,
-            'status': task.status,
-            'due_date': task.due_date,
-            'category_id': task.category_id,
-            'subtasks': [{'title': st.title, 'completed': st.completed} for st in task.subtasks],
-            'reminders': [{'reminder_time': r.reminder_time, 'sent': r.sent} for r in task.reminders]
-        }
-        
-    return render_template('tasks/edit.html', task=task_data, categories=categories, templates=templates)
 
 
 @bp.route('/<int:task_id>/complete', methods=['POST'])
@@ -275,20 +119,6 @@ def complete(task_id: int):
     return redirect(url_for('tasks.index'))
 
 
-@bp.route('/<int:task_id>/delete', methods=['POST'])
-@login_required
-def delete(task_id: int):
-    """Удалить задачу"""
-    with get_session() as session:
-        task = session.get(TaskORM, task_id)
-        if task:
-            session.delete(task)
-            session.commit()
-            flash('Задача удалена', 'success')
-        else:
-            flash('Задача не найдена', 'danger')
-    
-    return redirect(url_for('tasks.index'))
 
 
 @bp.route('/categories')
@@ -322,53 +152,15 @@ def category_new():
     return redirect(url_for('tasks.categories'))
 
 
-def apply_reminder_template(session, task: TaskORM, template_id: int):
-    """Применить шаблон напоминаний к задаче"""
-    template = session.get(ReminderTemplateORM, template_id)
-    if not template or not task.due_date:
-        return
-    
-    try:
-        rules = json.loads(template.rules)
-        due_datetime = datetime.fromisoformat(task.due_date)
-        
-        if rules.get('type') == 'before':
-            # Интервалы до дедлайна (в минутах)
-            for minutes_before in rules.get('intervals', []):
-                reminder_time = due_datetime - timedelta(minutes=minutes_before)
-                reminder = TaskReminderORM(
-                    task_id=task.id,
-                    reminder_time=reminder_time.isoformat(),
-                    created_at=datetime.now().isoformat()
-                )
-                session.add(reminder)
-        
-        elif rules.get('type') == 'range':
-            # Диапазон времени с частотой
-            start_time = datetime.fromisoformat(rules.get('start'))
-            end_time = datetime.fromisoformat(rules.get('end'))
-            frequency_minutes = rules.get('frequency_minutes', 60)
-            
-            current_time = start_time
-            while current_time <= end_time:
-                reminder = TaskReminderORM(
-                    task_id=task.id,
-                    reminder_time=current_time.isoformat(),
-                    created_at=datetime.now().isoformat()
-                )
-                session.add(reminder)
-                current_time += timedelta(minutes=frequency_minutes)
-                
-    except Exception as e:
-        print(f"Ошибка применения шаблона: {e}")
 
 
 # ==================== НОВАЯ ВЕРСИЯ С РАСПИСАНИЕМ (V2) ====================
 
-@bp.route('/new/v2', methods=['GET', 'POST'])
+@bp.route('/create', methods=['GET', 'POST'])
+@bp.route('/new', methods=['GET', 'POST'])
 @login_required
-def new_v2():
-    """Создание новой задачи v2 с расписанием"""
+def new():
+    """Создание новой задачи с расписанием"""
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -383,55 +175,14 @@ def new_v2():
                     description=task_data.get('description', ''),
                     importance=task_data.get('importance', 2),
                     category_id=task_data.get('category_id') or None,
-                    task_type=task_data.get('task_type', 'simple'),
-                    due_date=task_data.get('due_date') or None,
-                    is_paused=task_data.get('is_paused', False),
-                    paused_until=task_data.get('paused_until') or None,
+                    task_type='calendar_reminder',
+                    schedule_config=task_data.get('schedule_config'),
                     status=0,
-                    is_recurring=task_data.get('task_type') == 'recurring_event',
                     created_at=now,
                     updated_at=now
                 )
                 session.add(task)
-                session.flush()
-                
-                # Создаем расписания
-                for schedule_data in data.get('schedules', []):
-                    schedule = TaskScheduleORM(
-                        task_id=task.id,
-                        day_of_week=schedule_data['day_of_week'],
-                        start_time=schedule_data['start_time'],
-                        end_time=schedule_data.get('end_time'),
-                        is_active=schedule_data.get('is_active', True),
-                        created_at=now,
-                        updated_at=now
-                    )
-                    session.add(schedule)
-                
-                # Создаем правила напоминаний
-                for rule_data in data.get('reminder_rules', []):
-                    rule = ReminderRuleORM(
-                        task_id=task.id,
-                        rule_type=rule_data['rule_type'],
-                        offset_minutes=rule_data.get('offset_minutes'),
-                        interval_minutes=rule_data.get('interval_minutes'),
-                        start_from=rule_data.get('start_from'),
-                        stop_at=rule_data.get('stop_at'),
-                        is_active=rule_data.get('is_active', True),
-                        order_index=rule_data.get('order_index', 0),
-                        created_at=now,
-                        updated_at=now
-                    )
-                    session.add(rule)
-                
                 session.commit()
-                
-                # Генерируем напоминания
-                try:
-                    reminders_count = regenerate_task_reminders(task.id)
-                    print(f"✅ Создано {reminders_count} напоминаний для задачи {task.id}")
-                except Exception as e:
-                    print(f"⚠️ Ошибка генерации напоминаний: {e}")
                 
                 return jsonify({'success': True, 'task_id': task.id})
         
@@ -447,18 +198,16 @@ def new_v2():
         categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
     
     return render_template(
-        'tasks/edit_v2.html',
+        'tasks/edit_calendar.html',
         task_json='null',
-        schedules_json='[]',
-        rules_json='[]',
         categories_json=json.dumps(categories)
     )
 
 
-@bp.route('/<int:task_id>/edit/v2', methods=['GET', 'POST'])
+@bp.route('/<int:task_id>/edit', methods=['GET', 'POST'])
 @login_required
-def edit_v2(task_id):
-    """Редактирование задачи v2"""
+def edit(task_id):
+    """Редактирование задачи"""
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -476,65 +225,11 @@ def edit_v2(task_id):
                 task.description = task_data.get('description', '')
                 task.importance = task_data.get('importance', 2)
                 task.category_id = task_data.get('category_id') or None
-                task.task_type = task_data.get('task_type', 'simple')
-                task.due_date = task_data.get('due_date') or None
-                task.is_paused = task_data.get('is_paused', False)
-                task.paused_until = task_data.get('paused_until') or None
-                task.is_recurring = task_data.get('task_type') == 'recurring_event'
+                task.task_type = 'calendar_reminder'
+                task.schedule_config = task_data.get('schedule_config')
                 task.updated_at = now
                 
-                # Удаляем старые расписания
-                session.execute(
-                    select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
-                ).scalars().all()
-                for old_schedule in session.execute(
-                    select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
-                ).scalars():
-                    session.delete(old_schedule)
-                
-                # Создаем новые расписания
-                for schedule_data in data.get('schedules', []):
-                    schedule = TaskScheduleORM(
-                        task_id=task.id,
-                        day_of_week=schedule_data['day_of_week'],
-                        start_time=schedule_data['start_time'],
-                        end_time=schedule_data.get('end_time'),
-                        is_active=schedule_data.get('is_active', True),
-                        created_at=now,
-                        updated_at=now
-                    )
-                    session.add(schedule)
-                
-                # Удаляем старые правила
-                for old_rule in session.execute(
-                    select(ReminderRuleORM).where(ReminderRuleORM.task_id == task_id)
-                ).scalars():
-                    session.delete(old_rule)
-                
-                # Создаем новые правила
-                for rule_data in data.get('reminder_rules', []):
-                    rule = ReminderRuleORM(
-                        task_id=task.id,
-                        rule_type=rule_data['rule_type'],
-                        offset_minutes=rule_data.get('offset_minutes'),
-                        interval_minutes=rule_data.get('interval_minutes'),
-                        start_from=rule_data.get('start_from'),
-                        stop_at=rule_data.get('stop_at'),
-                        is_active=rule_data.get('is_active', True),
-                        order_index=rule_data.get('order_index', 0),
-                        created_at=now,
-                        updated_at=now
-                    )
-                    session.add(rule)
-                
                 session.commit()
-                
-                # Регенерируем напоминания
-                try:
-                    reminders_count = regenerate_task_reminders(task.id)
-                    print(f"✅ Обновлено {reminders_count} напоминаний для задачи {task.id}")
-                except Exception as e:
-                    print(f"⚠️ Ошибка генерации напоминаний: {e}")
                 
                 return jsonify({'success': True})
         
@@ -558,59 +253,24 @@ def edit_v2(task_id):
             'description': task_orm.description or '',
             'importance': task_orm.importance,
             'category_id': task_orm.category_id,
-            'task_type': task_orm.task_type,
-            'due_date': task_orm.due_date or '',
-            'is_paused': bool(task_orm.is_paused),
-            'paused_until': task_orm.paused_until or ''
+            'schedule_config': task_orm.schedule_config or '{}'
         })
-        
-        # Получаем расписания
-        schedules = session.execute(
-            select(TaskScheduleORM).where(TaskScheduleORM.task_id == task_id)
-        ).scalars().all()
-        
-        schedules_json = json.dumps([{
-            'id': s.id,
-            'day_of_week': s.day_of_week,
-            'start_time': s.start_time,
-            'end_time': s.end_time,
-            'is_active': bool(s.is_active)
-        } for s in schedules])
-        
-        # Получаем правила
-        rules = session.execute(
-            select(ReminderRuleORM).where(ReminderRuleORM.task_id == task_id)
-            .order_by(ReminderRuleORM.order_index)
-        ).scalars().all()
-        
-        rules_json = json.dumps([{
-            'id': r.id,
-            'rule_type': r.rule_type,
-            'offset_minutes': r.offset_minutes,
-            'interval_minutes': r.interval_minutes,
-            'start_from': r.start_from,
-            'stop_at': r.stop_at,
-            'is_active': bool(r.is_active),
-            'order_index': r.order_index
-        } for r in rules])
         
         # Категории
         categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
         categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
     
     return render_template(
-        'tasks/edit_v2.html',
+        'tasks/edit_calendar.html',
         task_json=task_json,
-        schedules_json=schedules_json,
-        rules_json=rules_json,
         categories_json=json.dumps(categories)
     )
 
 
-@bp.route('/<int:task_id>/delete/v2', methods=['POST'])
+@bp.route('/<int:task_id>/delete', methods=['POST'])
 @login_required
-def delete_v2(task_id):
-    """Удаление задачи v2"""
+def delete(task_id):
+    """Удаление задачи"""
     try:
         with get_session() as session:
             task = session.get(TaskORM, task_id)
@@ -624,4 +284,284 @@ def delete_v2(task_id):
     
     except Exception as e:
         print(f"Error deleting task: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/reminder-templates', methods=['GET'])
+@login_required
+def get_reminder_templates():
+    """Получить список шаблонов напоминаний"""
+    try:
+        task_type = request.args.get('task_type', '')
+        category = request.args.get('category', '')
+        
+        with get_session() as session:
+            query = select(ReminderRuleTemplateORM).where(
+                ReminderRuleTemplateORM.is_active == True
+            )
+            
+            # Фильтр по категории
+            if category:
+                query = query.where(ReminderRuleTemplateORM.category == category)
+            
+            query = query.order_by(ReminderRuleTemplateORM.category, ReminderRuleTemplateORM.id)
+            
+            templates_orm = session.execute(query).scalars().all()
+            
+            # Преобразуем в JSON
+            templates = []
+            for t in templates_orm:
+                # Парсим suitable_for_task_types
+                suitable_for = []
+                if t.suitable_for_task_types:
+                    try:
+                        suitable_for = json.loads(t.suitable_for_task_types)
+                    except:
+                        pass
+                
+                # Фильтр по типу задачи
+                if task_type and task_type not in suitable_for:
+                    continue
+                
+                # Парсим правила
+                rules = []
+                try:
+                    rules = json.loads(t.rules_json)
+                except:
+                    pass
+                
+                templates.append({
+                    'id': t.id,
+                    'name': t.name,
+                    'description': t.description,
+                    'category': t.category,
+                    'icon': t.icon,
+                    'rules': rules,
+                    'suitable_for': suitable_for,
+                    'is_system': t.is_system,
+                    'usage_count': t.usage_count
+                })
+            
+            return jsonify({
+                'success': True,
+                'templates': templates
+            })
+    
+    except Exception as e:
+        print(f"Error loading templates: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/reminder-preview', methods=['POST'])
+@login_required
+def get_reminder_preview():
+    """Предпросмотр напоминаний для задачи"""
+    try:
+        data = request.get_json()
+        
+        # Создаем временную задачу для предпросмотра
+        from datetime import datetime, timedelta
+        from app.reminder_generator import ReminderGenerator
+        
+        task_data = data.get('task', {})
+        schedules_data = data.get('schedules', [])
+        rules_data = data.get('reminder_rules', [])
+        
+        # Если нет правил - возвращаем пустой список
+        if not rules_data:
+            return jsonify({'success': True, 'reminders': []})
+        
+        # Генерируем предпросмотр
+        preview_reminders = []
+        now = datetime.now()
+        
+        # Для каждого расписания
+        for schedule in schedules_data:
+            day_of_week = schedule['day_of_week']
+            start_time = schedule['start_time']
+            end_time = schedule.get('end_time')
+            
+            # Находим ближайшие даты для этого дня недели (следующие 2 недели)
+            for days_ahead in range(14):
+                check_date = now.date() + timedelta(days=days_ahead)
+                
+                # Проверяем день недели (1=Пн, 7=Вс)
+                if check_date.isoweekday() == day_of_week:
+                    # Создаем datetime для начала
+                    start_hour, start_min = map(int, start_time.split(':'))
+                    event_start = datetime.combine(check_date, datetime.min.time().replace(
+                        hour=start_hour, minute=start_min
+                    ))
+                    
+                    event_end = None
+                    if end_time:
+                        end_hour, end_min = map(int, end_time.split(':'))
+                        event_end = datetime.combine(check_date, datetime.min.time().replace(
+                            hour=end_hour, minute=end_min
+                        ))
+                    
+                    # Применяем каждое правило
+                    for rule in rules_data:
+                        rule_obj = type('Rule', (), rule)()  # Создаем объект из словаря
+                        
+                        # Генерируем напоминания для этого события
+                        if rule.get('rule_type') == 'before_start':
+                            offset = rule.get('offset_minutes', 0)
+                            reminder_time = event_start - timedelta(minutes=offset)
+                            if reminder_time > now:
+                                preview_reminders.append({
+                                    'date': reminder_time.date().isoformat(),
+                                    'time': reminder_time.time().strftime('%H:%M'),
+                                    'datetime': reminder_time.isoformat(),
+                                    'rule_type': rule.get('rule_type'),
+                                    'day_name': check_date.strftime('%A'),
+                                    'day_of_week': day_of_week
+                                })
+                        
+                        elif rule.get('rule_type') == 'at_start':
+                            # В момент начала (offset = 0)
+                            if event_start > now:
+                                preview_reminders.append({
+                                    'date': event_start.date().isoformat(),
+                                    'time': event_start.time().strftime('%H:%M'),
+                                    'datetime': event_start.isoformat(),
+                                    'rule_type': rule.get('rule_type'),
+                                    'day_name': check_date.strftime('%A'),
+                                    'day_of_week': day_of_week
+                                })
+                        
+                        elif rule.get('rule_type') == 'before_end' and event_end:
+                            offset = rule.get('offset_minutes', 0)
+                            reminder_time = event_end - timedelta(minutes=offset)
+                            if reminder_time > now:
+                                preview_reminders.append({
+                                    'date': reminder_time.date().isoformat(),
+                                    'time': reminder_time.time().strftime('%H:%M'),
+                                    'datetime': reminder_time.isoformat(),
+                                    'rule_type': rule.get('rule_type'),
+                                    'day_name': check_date.strftime('%A'),
+                                    'day_of_week': day_of_week
+                                })
+                        
+                        elif rule.get('rule_type') == 'periodic_before':
+                            # Периодические напоминания до начала
+                            interval = rule.get('interval_minutes', 30)
+                            start_from = rule.get('start_from', '16:00')
+                            stop_at = rule.get('stop_at', 30)
+                            
+                            # Парсим start_from
+                            if ':' in str(start_from):
+                                sh, sm = map(int, start_from.split(':'))
+                                current = datetime.combine(check_date, datetime.min.time().replace(hour=sh, minute=sm))
+                            else:
+                                current = event_start - timedelta(minutes=int(start_from))
+                            
+                            # Генерируем напоминания
+                            stop_time = event_start - timedelta(minutes=int(stop_at))
+                            
+                            while current <= stop_time and current > now:
+                                preview_reminders.append({
+                                    'date': current.date().isoformat(),
+                                    'time': current.time().strftime('%H:%M'),
+                                    'datetime': current.isoformat(),
+                                    'rule_type': rule.get('rule_type'),
+                                    'day_name': check_date.strftime('%A'),
+                                    'day_of_week': day_of_week
+                                })
+                                current += timedelta(minutes=interval)
+                        
+                        elif rule.get('rule_type') == 'after_end' and event_end:
+                            offset = rule.get('offset_minutes', 0)
+                            reminder_time = event_end + timedelta(minutes=offset)
+                            if reminder_time > now:
+                                preview_reminders.append({
+                                    'date': reminder_time.date().isoformat(),
+                                    'time': reminder_time.time().strftime('%H:%M'),
+                                    'datetime': reminder_time.isoformat(),
+                                    'rule_type': rule.get('rule_type'),
+                                    'day_name': check_date.strftime('%A'),
+                                    'day_of_week': day_of_week
+                                })
+        
+        # Сортируем по времени
+        preview_reminders.sort(key=lambda r: r['datetime'])
+        
+        # Группируем по датам
+        reminders_by_date = {}
+        for reminder in preview_reminders:
+            date_key = reminder['date']
+            if date_key not in reminders_by_date:
+                reminders_by_date[date_key] = []
+            reminders_by_date[date_key].append(reminder)
+        
+        return jsonify({
+            'success': True,
+            'total_count': len(preview_reminders),
+            'reminders_by_date': reminders_by_date,
+            'all_reminders': preview_reminders[:100]  # Первые 100 для списка
+        })
+    
+    except Exception as e:
+        print(f"Error generating preview: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+@bp.route('/save-template', methods=['POST'])
+@login_required
+def save_user_template():
+    """Сохранить пользовательский шаблон"""
+    try:
+        data = request.get_json()
+        
+        name = data.get('name', '').strip()
+        if not name:
+            return jsonify({'error': 'Название шаблона обязательно'}), 400
+        
+        rules = data.get('rules', [])
+        if not rules:
+            return jsonify({'error': 'Добавьте хотя бы одно правило'}), 400
+        
+        with get_session() as session:
+            now = datetime.now().isoformat()
+            
+            # Определяем для каких типов задач подходит
+            task_type = data.get('task_type', 'simple')
+            suitable_for = [task_type]
+            if task_type == 'recurring_event':
+                suitable_for.append('event')
+            
+            template = ReminderRuleTemplateORM(
+                name=name,
+                description=data.get('description', f'Пользовательский шаблон'),
+                category=data.get('category', 'custom'),
+                icon='⭐',  # Иконка для пользовательских шаблонов
+                rules_json=json.dumps(rules, ensure_ascii=False),
+                suitable_for_task_types=json.dumps(suitable_for),
+                is_system=False,
+                is_active=True,
+                usage_count=0,
+                created_by=None,  # TODO: добавить user_id когда будет авторизация
+                created_at=now,
+                updated_at=now
+            )
+            
+            session.add(template)
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'template_id': template.id,
+                'message': f'Шаблон "{name}" успешно сохранен!'
+            })
+    
+    except Exception as e:
+        print(f"Error saving template: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Записная книжка Валентина{% endblock %}</title>
     
+    <!-- Prevent caching for development -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     
@@ -16,6 +21,18 @@
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+        
+        /* Ограничение максимальной ширины для комфортного чтения */
+        .container {
+            max-width: 1400px;
+        }
+        
+        @media (min-width: 1600px) {
+            .container {
+                max-width: 1600px;
+            }
+        }
+        
         .sidebar {
             min-height: calc(100vh - 56px);
             background: #f8f9fa;
@@ -41,7 +58,7 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
+        <div class="container">
             <a class="navbar-brand" href="{{ url_for('views.dashboard') }}">
                 <strong>Записная книжка Валентина</strong>
             </a>
@@ -78,7 +95,7 @@
     </nav>
 
     <!-- Flash messages -->
-    <div class="container-fluid mt-3">
+    <div class="container mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -92,7 +109,7 @@
     </div>
 
     <!-- Main content -->
-    <div class="container-fluid mt-3">
+    <div class="container mt-3">
         {% block content %}{% endblock %}
     </div>
 

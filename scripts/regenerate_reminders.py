@@ -17,7 +17,8 @@ def main():
     print(f"🔄 Запуск регенерации напоминаний - {datetime.now().isoformat()}")
     
     try:
-        result = ReminderGenerator.regenerate_all_tasks_reminders(days_ahead=14)
+        # Генерируем напоминания на 1 день вперед (запускается каждую ночь)
+        result = ReminderGenerator.regenerate_all_tasks_reminders(days_ahead=1)
         
         print(f"✅ Обработано задач: {result['tasks_processed']}")
         print(f"✅ Создано напоминаний: {result['reminders_created']}")

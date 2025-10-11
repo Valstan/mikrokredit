@@ -1,0 +1,587 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task_json != 'null' %}Редактировать{% else %}Новая{% endif %} задача{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10">
+        <h2 class="mb-4">
+            <i class="bi bi-check2-square"></i>
+            {% if task_json != 'null' %}Редактировать задачу{% else %}Новая задача{% endif %}
+        </h2>
+
+        <form id="taskForm">
+            <!-- Основная информация -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📝 Основная информация</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Название задачи *</label>
+                            <input type="text" id="title" class="form-control form-control-lg" required placeholder="Например: Прием лекарств">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Описание</label>
+                            <textarea id="description" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Важность *</label>
+                            <select id="importance" class="form-select">
+                                <option value="1">🔴 Важная</option>
+                                <option value="2" selected>🟡 Нужная</option>
+                                <option value="3">⚪ Хотелось бы</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Категория</label>
+                            <select id="category_id" class="form-select">
+                                <option value="">Без категории</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Интерактивное расписание -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">📅 Интерактивное расписание напоминаний</h5>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Переключатель режимов -->
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Режим периодичности:</strong> Выберите либо месячный, либо недельный режим
+                    </div>
+
+                    <div class="btn-group w-100 mb-4" role="group">
+                        <input type="radio" class="btn-check" id="mode-monthly" name="schedule_mode" value="monthly" checked>
+                        <label class="btn btn-outline-primary btn-lg" for="mode-monthly" onclick="switchMode('monthly')">
+                            📆 Месячный режим
+                        </label>
+
+                        <input type="radio" class="btn-check" id="mode-weekly" name="schedule_mode" value="weekly">
+                        <label class="btn btn-outline-primary btn-lg" for="mode-weekly" onclick="switchMode('weekly')">
+                            📅 Недельный режим
+                        </label>
+                    </div>
+
+                    <!-- МЕСЯЧНЫЙ РЕЖИМ -->
+                    <div id="monthly-mode">
+                        <h6 class="mb-3">📆 Выберите месяцы и дни:</h6>
+                        
+                        <!-- Таблица месяцев -->
+                        <div class="mb-4">
+                            <label class="fw-bold mb-2">Месяцы:</label>
+                            <div id="months-grid" class="d-grid gap-2" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                                <!-- JavaScript заполнит -->
+                            </div>
+                        </div>
+
+                        <!-- Таблица дней месяца -->
+                        <div class="mb-4">
+                            <label class="fw-bold mb-2">Дни месяца:</label>
+                            <div id="days-grid" class="d-grid gap-2" style="grid-template-columns: repeat(7, 1fr);">
+                                <!-- JavaScript заполнит -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- НЕДЕЛЬНЫЙ РЕЖИМ -->
+                    <div id="weekly-mode" style="display:none;">
+                        <h6 class="mb-3">📅 Выберите дни недели:</h6>
+                        <div id="weekdays-grid" class="d-grid gap-2" style="grid-template-columns: repeat(7, 1fr);">
+                            <!-- JavaScript заполнит -->
+                        </div>
+                    </div>
+
+                    <!-- СУТОЧНЫЙ РЕЖИМ (всегда активен) -->
+                    <div class="mt-4">
+                        <h6 class="mb-3">⏰ Выберите время в сутках (интервал 15 минут):</h6>
+                        <div class="mb-2 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllTime()">Выбрать все</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllTime()">Очистить все</button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="selectWorkHours()">Рабочие часы (9-18)</button>
+                        </div>
+                        <div id="time-grid" class="d-grid gap-1" style="grid-template-columns: repeat(12, 1fr); font-size: 0.8rem;">
+                            <!-- JavaScript заполнит -->
+                        </div>
+                    </div>
+
+                    <!-- Сводка выбора -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6>📊 Выбранное расписание:</h6>
+                        <div id="selection-summary" class="small">
+                            <!-- JavaScript заполнит -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="d-flex gap-2 mt-4 flex-wrap">
+                <button type="submit" class="btn btn-primary btn-lg px-4" id="saveBtn">
+                    <i class="bi bi-save"></i> Сохранить
+                </button>
+                <a href="{{ url_for('tasks.index') }}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-x"></i> Отмена
+                </a>
+                <button type="button" class="btn btn-outline-danger btn-lg ms-auto" id="deleteBtn" style="display:none;">
+                    <i class="bi bi-trash"></i> Удалить задачу
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Данные из сервера
+const taskData = {{ task_json|safe }};
+const categories = {{ categories_json|safe }};
+
+// Состояние расписания
+let scheduleMode = 'monthly'; // 'monthly' или 'weekly'
+let selectedMonths = new Set(); // [1, 2, 3, ...] - номера месяцев
+let selectedDays = new Set(); // [1, 2, 3, ..., 31] - дни месяца
+let selectedWeekdays = new Set(); // [1, 2, ..., 7] - дни недели (1=Пн)
+let selectedTimes = new Set(); // ['09:00', '09:15', ...] - времена
+
+const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const weekdayNames = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+
+// === ИНИЦИАЛИЗАЦИЯ ===
+
+function init() {
+    console.log('🚀 Инициализация календарного планировщика');
+    
+    fillBasicForm();
+    renderMonthsGrid();
+    renderDaysGrid();
+    renderWeekdaysGrid();
+    renderTimeGrid();
+    
+    // Загрузить сохраненные данные если есть
+    loadScheduleFromData();
+    
+    updateSummary();
+}
+
+function fillBasicForm() {
+    // Категории
+    const catSelect = document.getElementById('category_id');
+    categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        catSelect.appendChild(opt);
+    });
+
+    if (taskData) {
+        document.getElementById('title').value = taskData.title || '';
+        document.getElementById('description').value = taskData.description || '';
+        document.getElementById('importance').value = taskData.importance || 2;
+        document.getElementById('category_id').value = taskData.category_id || '';
+
+        if (taskData.id) {
+            document.getElementById('deleteBtn').style.display = 'inline-block';
+        }
+    }
+}
+
+function loadScheduleFromData() {
+    if (!taskData || !taskData.schedule_config) {
+        console.log('⚠️ Нет сохраненных данных расписания');
+        return;
+    }
+    
+    try {
+        const config = JSON.parse(taskData.schedule_config);
+        console.log('📊 Загружаем расписание:', config);
+        
+        // Режим
+        if (config.mode) {
+            scheduleMode = config.mode;
+            document.getElementById(`mode-${config.mode}`).checked = true;
+            switchMode(config.mode);
+        }
+        
+        // Месяцы
+        if (config.months && Array.isArray(config.months)) {
+            config.months.forEach(m => selectedMonths.add(m));
+            renderMonthsGrid();
+        }
+        
+        // Дни месяца
+        if (config.days && Array.isArray(config.days)) {
+            config.days.forEach(d => selectedDays.add(d));
+            renderDaysGrid();
+        }
+        
+        // Дни недели
+        if (config.weekdays && Array.isArray(config.weekdays)) {
+            config.weekdays.forEach(w => selectedWeekdays.add(w));
+            renderWeekdaysGrid();
+        }
+        
+        // Времена
+        if (config.times && Array.isArray(config.times)) {
+            config.times.forEach(t => selectedTimes.add(t));
+            renderTimeGrid();
+        }
+        
+        updateSummary();
+        console.log('✅ Расписание загружено');
+    } catch (error) {
+        console.error('❌ Ошибка загрузки расписания:', error);
+    }
+}
+
+// === РЕЖИМЫ ===
+
+function switchMode(mode) {
+    scheduleMode = mode;
+    
+    document.getElementById('monthly-mode').style.display = mode === 'monthly' ? 'block' : 'none';
+    document.getElementById('weekly-mode').style.display = mode === 'weekly' ? 'block' : 'none';
+    
+    // Очищаем противоположный режим
+    if (mode === 'monthly') {
+        selectedWeekdays.clear();
+        renderWeekdaysGrid();
+    } else {
+        selectedMonths.clear();
+        selectedDays.clear();
+        renderMonthsGrid();
+        renderDaysGrid();
+    }
+    
+    updateSummary();
+}
+
+// === МЕСЯЦЫ ===
+
+function renderMonthsGrid() {
+    const grid = document.getElementById('months-grid');
+    grid.innerHTML = '';
+    
+    const today = new Date();
+    const currentMonth = today.getMonth(); // 0-11
+    
+    // 6 месяцев вперед
+    for (let i = 0; i < 6; i++) {
+        const monthIndex = (currentMonth + i) % 12;
+        const monthNum = monthIndex + 1; // 1-12
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn ${selectedMonths.has(monthNum) ? 'btn-primary' : 'btn-outline-primary'}`;
+        btn.textContent = monthNames[monthIndex];
+        btn.onclick = () => toggleMonth(monthNum);
+        
+        grid.appendChild(btn);
+    }
+}
+
+function toggleMonth(monthNum) {
+    if (selectedMonths.has(monthNum)) {
+        selectedMonths.delete(monthNum);
+    } else {
+        selectedMonths.add(monthNum);
+    }
+    renderMonthsGrid();
+    updateSummary();
+}
+
+// === ДНИ МЕСЯЦА ===
+
+function renderDaysGrid() {
+    const grid = document.getElementById('days-grid');
+    grid.innerHTML = '';
+    
+    for (let day = 1; day <= 31; day++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn btn-sm ${selectedDays.has(day) ? 'btn-success' : 'btn-outline-secondary'}`;
+        btn.textContent = day;
+        btn.onclick = () => toggleDay(day);
+        
+        grid.appendChild(btn);
+    }
+}
+
+function toggleDay(day) {
+    if (selectedDays.has(day)) {
+        selectedDays.delete(day);
+    } else {
+        selectedDays.add(day);
+    }
+    renderDaysGrid();
+    updateSummary();
+}
+
+// === ДНИ НЕДЕЛИ ===
+
+function renderWeekdaysGrid() {
+    const grid = document.getElementById('weekdays-grid');
+    grid.innerHTML = '';
+    
+    weekdayNames.forEach((name, index) => {
+        const weekdayNum = index + 1; // 1=Пн
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn ${selectedWeekdays.has(weekdayNum) ? 'btn-info' : 'btn-outline-info'}`;
+        btn.textContent = name;
+        btn.onclick = () => toggleWeekday(weekdayNum);
+        
+        grid.appendChild(btn);
+    });
+}
+
+function toggleWeekday(weekdayNum) {
+    if (selectedWeekdays.has(weekdayNum)) {
+        selectedWeekdays.delete(weekdayNum);
+    } else {
+        selectedWeekdays.add(weekdayNum);
+    }
+    renderWeekdaysGrid();
+    updateSummary();
+}
+
+// === ВРЕМЯ В СУТКАХ ===
+
+function renderTimeGrid() {
+    const grid = document.getElementById('time-grid');
+    grid.innerHTML = '';
+    
+    // 96 ячеек (24 часа × 4 = каждые 15 минут)
+    for (let hour = 0; hour < 24; hour++) {
+        for (let min = 0; min < 60; min += 15) {
+            const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `btn btn-sm ${selectedTimes.has(time) ? 'btn-warning' : 'btn-outline-secondary'}`;
+            btn.textContent = time;
+            btn.title = time;
+            btn.onclick = () => toggleTime(time);
+            
+            grid.appendChild(btn);
+        }
+    }
+}
+
+function toggleTime(time) {
+    if (selectedTimes.has(time)) {
+        selectedTimes.delete(time);
+    } else {
+        selectedTimes.add(time);
+    }
+    renderTimeGrid();
+    updateSummary();
+}
+
+function selectAllTime() {
+    for (let hour = 0; hour < 24; hour++) {
+        for (let min = 0; min < 60; min += 15) {
+            const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            selectedTimes.add(time);
+        }
+    }
+    renderTimeGrid();
+    updateSummary();
+}
+
+function clearAllTime() {
+    selectedTimes.clear();
+    renderTimeGrid();
+    updateSummary();
+}
+
+function selectWorkHours() {
+    selectedTimes.clear();
+    for (let hour = 9; hour < 18; hour++) {
+        for (let min = 0; min < 60; min += 15) {
+            const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            selectedTimes.add(time);
+        }
+    }
+    renderTimeGrid();
+    updateSummary();
+}
+
+// === СВОДКА ===
+
+function updateSummary() {
+    const summary = document.getElementById('selection-summary');
+    let html = '';
+    
+    if (scheduleMode === 'monthly') {
+        if (selectedMonths.size > 0) {
+            const months = Array.from(selectedMonths).sort((a, b) => a - b)
+                .map(m => monthNames[m - 1]).join(', ');
+            html += `<div><strong>Месяцы:</strong> ${months}</div>`;
+        } else {
+            html += `<div class="text-muted">Месяцы не выбраны</div>`;
+        }
+        
+        if (selectedDays.size > 0) {
+            const days = Array.from(selectedDays).sort((a, b) => a - b).join(', ');
+            html += `<div><strong>Дни месяца:</strong> ${days}</div>`;
+        } else {
+            html += `<div class="text-muted">Дни не выбраны</div>`;
+        }
+    } else {
+        if (selectedWeekdays.size > 0) {
+            const weekdays = Array.from(selectedWeekdays).sort((a, b) => a - b)
+                .map(w => weekdayNames[w - 1]).join(', ');
+            html += `<div><strong>Дни недели:</strong> ${weekdays}</div>`;
+        } else {
+            html += `<div class="text-muted">Дни недели не выбраны</div>`;
+        }
+    }
+    
+    if (selectedTimes.size > 0) {
+        const times = Array.from(selectedTimes).sort().slice(0, 10).join(', ');
+        const more = selectedTimes.size > 10 ? ` и еще ${selectedTimes.size - 10}` : '';
+        html += `<div><strong>Время:</strong> ${times}${more}</div>`;
+    } else {
+        html += `<div class="text-muted">Время не выбрано</div>`;
+    }
+    
+    // Подсчет напоминаний
+    const count = calculateRemindersCount();
+    html += `<div class="mt-2 text-primary"><strong>📊 Примерно напоминаний в сутки: ${count}</strong></div>`;
+    
+    summary.innerHTML = html;
+}
+
+function calculateRemindersCount() {
+    if (selectedTimes.size === 0) return 0;
+    
+    if (scheduleMode === 'monthly') {
+        // Для месячного: количество времён × количество дней
+        return selectedTimes.size * selectedDays.size;
+    } else {
+        // Для недельного: количество времён × количество дней недели
+        return selectedTimes.size * selectedWeekdays.size;
+    }
+}
+
+// === СОХРАНЕНИЕ ===
+
+document.getElementById('taskForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (selectedTimes.size === 0) {
+        alert('⚠️ Выберите хотя бы одно время для напоминаний!');
+        return;
+    }
+
+    if (scheduleMode === 'monthly' && (selectedMonths.size === 0 || selectedDays.size === 0)) {
+        alert('⚠️ Выберите месяцы и дни для месячного режима!');
+        return;
+    }
+
+    if (scheduleMode === 'weekly' && selectedWeekdays.size === 0) {
+        alert('⚠️ Выберите дни недели для недельного режима!');
+        return;
+    }
+
+    const scheduleConfig = {
+        mode: scheduleMode,
+        months: Array.from(selectedMonths).sort(),
+        days: Array.from(selectedDays).sort(),
+        weekdays: Array.from(selectedWeekdays).sort(),
+        times: Array.from(selectedTimes).sort()
+    };
+
+    const data = {
+        task: {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            importance: parseInt(document.getElementById('importance').value),
+            category_id: document.getElementById('category_id').value || null,
+            task_type: 'calendar_reminder', // Новый тип для календарных напоминаний
+            schedule_config: JSON.stringify(scheduleConfig)
+        }
+    };
+
+    const url = taskData?.id ? `/tasks/${taskData.id}/edit` : '/tasks/new';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert(`✅ Задача сохранена!\n\nБудет создано ~${calculateRemindersCount()} напоминаний в сутки`);
+            window.location.href = '/tasks';
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        alert('❌ Ошибка сохранения: ' + error.message);
+    }
+});
+
+// Удаление
+document.getElementById('deleteBtn').addEventListener('click', async () => {
+    if (!confirm('⚠️ Удалить эту задачу?\n\nЭто действие нельзя отменить.')) return;
+
+    const btn = document.getElementById('deleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Удаление...';
+
+    try {
+        const response = await fetch(`/tasks/${taskData.id}/delete`, {method: 'POST'});
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            window.location.href = '/tasks';
+        } else {
+            alert('❌ Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash"></i> Удалить задачу';
+        }
+    } catch (error) {
+        alert('❌ Ошибка: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash"></i> Удалить задачу';
+    }
+});
+
+// Запуск при загрузке
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+<style>
+.d-grid button {
+    padding: 0.5rem;
+    transition: all 0.2s;
+}
+
+.d-grid button:hover {
+    transform: scale(1.05);
+}
+
+#time-grid button {
+    padding: 0.25rem;
+    font-size: 0.7rem;
+}
+</style>
+
+{% endblock %}
+

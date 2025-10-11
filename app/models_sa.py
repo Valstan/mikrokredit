@@ -88,16 +88,17 @@ class TaskORM(Base):
     category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("task_categories.id", ondelete="SET NULL"), nullable=True)
     
     # Повтор задачи
-    is_recurring: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    is_recurring: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # JSON с правилами повтора
     
     # Новые поля для гибких расписаний
-    task_type: Mapped[str] = mapped_column(String(50), default="simple", nullable=False)  # simple, event, recurring_event
-    has_duration: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    task_type: Mapped[str] = mapped_column(String(50), default="simple", nullable=False)  # simple, event, recurring_event, calendar_reminder
+    has_duration: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     duration_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    schedule_config: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON для календарного планировщика
     
     # Приостановка
-    is_paused: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    is_paused: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     paused_until: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # YYYY-MM-DD
     
     category: Mapped[Optional[TaskCategoryORM]] = relationship(back_populates="tasks")
@@ -114,7 +115,7 @@ class SubtaskORM(Base):
     id: Mapped[int] = mapped_column(Integer, Sequence('subtasks_id_seq'), primary_key=True, autoincrement=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    completed: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -132,14 +133,14 @@ class TaskReminderORM(Base):
     reminder_time: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD HH:MM:SS
     
     # Отправлено ли
-    sent: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sent_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # ID сообщения в Telegram (для callback)
     telegram_message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Пользователь отреагировал на напоминание
-    acknowledged: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)
+    acknowledged: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     acknowledged_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     created_at: Mapped[str] = mapped_column(String, nullable=False)
@@ -148,7 +149,7 @@ class TaskReminderORM(Base):
 
 
 class ReminderTemplateORM(Base):
-    """Шаблоны напоминаний"""
+    """Старые шаблоны напоминаний (устаревшая таблица)"""
     __tablename__ = "reminder_templates"
 
     id: Mapped[int] = mapped_column(Integer, Sequence('reminder_templates_id_seq'), primary_key=True, autoincrement=True)
@@ -157,9 +158,35 @@ class ReminderTemplateORM(Base):
     
     # JSON с правилами: {"type": "before", "intervals": [1440, 60, 0]} - за 1 день, 1 час, в момент
     rules: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ReminderRuleTemplateORM(Base):
+    """Новые шаблоны правил напоминаний"""
+    __tablename__ = "reminder_rule_templates"
     
-    is_system: Mapped[bool] = mapped_column(Integer, default=0, nullable=False)  # Системный шаблон
+    id: Mapped[int] = mapped_column(Integer, Sequence('reminder_rule_templates_id_seq'), primary_key=True, autoincrement=True)
+    
+    # Основная информация
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    icon: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    
+    # JSON с массивом правил
+    rules_json: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    # Для каких типов задач подходит
+    # suitable_for_task_types будет храниться как JSON строка
+    suitable_for_task_types: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Метаданные
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    created_by: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class TaskScheduleORM(Base):
@@ -179,7 +206,7 @@ class TaskScheduleORM(Base):
     end_time: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Активно ли это расписание
-    is_active: Mapped[bool] = mapped_column(Integer, default=1, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Метаданные
     created_at: Mapped[str] = mapped_column(String, nullable=False)
@@ -216,7 +243,7 @@ class ReminderRuleORM(Base):
     stop_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Активно ли правило
-    is_active: Mapped[bool] = mapped_column(Integer, default=1, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Порядок отображения
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

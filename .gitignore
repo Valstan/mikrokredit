@@ -1,17 +1,35 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
+*.so
+*.egg
 *.egg-info/
 dist/
 build/
-
-# Virtual Environment
 .venv/
 venv/
 ENV/
+
+# Logs
+logs/*.log
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Config secrets
+config_secure.py
+app/secrets.py
+.env
+*.env
+*.key
+*.pem
 
 # IDE
 .vscode/
@@ -20,48 +38,21 @@ ENV/
 *.swo
 *~
 
-# Logs
-logs/*.log
-*.log
-nohup.out
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Backups
-backups/
-*.sql
-*.sql.gz
-
-# Secrets
-config_secure.py
-.env
-*.pem
-*.key
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Project specific
-mikrokredit.pid
-old/
-*.bak
-
-# Временные
-tmp/
-temp/
-
-# Секреты и конфиденциальные данные
-.env
-.env.local
-.env.*.local
-config_secure.py
-secrets.py.local
-
-# Бэкапы (содержат данные)
+# Backups
 backups/*.sql
-backups/*.sql.gz
+backups/*.gz
 *.bak
+
+# PID files
+*.pid
+
+# Service files with secrets
+*.service
+
+# Temporary files
+*.tmp
+.cache/
