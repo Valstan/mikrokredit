@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - МикроКредит{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar меню -->
+        <div class="card">
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile.index') }}" class="list-group-item list-group-item-action active">
+                        <i class="bi bi-person"></i> Профиль
+                    </a>
+                    <a href="{{ url_for('profile.edit') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-pencil"></i> Редактировать
+                    </a>
+                    <a href="{{ url_for('profile.change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-key"></i> Сменить пароль
+                    </a>
+                    <a href="{{ url_for('profile.notifications') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-bell"></i> Уведомления
+                    </a>
+                    <a href="{{ url_for('profile.security') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shield-check"></i> Безопасность
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-person-circle"></i> Мой профиль</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Email:</div>
+                    <div class="col-sm-9">
+                        {{ user.email }}
+                        {% if user.email_verified %}
+                            <span class="badge bg-success">Подтвержден</span>
+                        {% else %}
+                            <span class="badge bg-warning">Не подтвержден</span>
+                            <form method="POST" action="{{ url_for('auth.resend_verification') }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-link">Отправить письмо повторно</button>
+                            </form>
+                        {% endif %}
+                        <a href="{{ url_for('profile.change_email') }}" class="btn btn-sm btn-outline-primary ms-2">
+                            <i class="bi bi-pencil"></i> Изменить
+                        </a>
+                    </div>
+                </div>
+
+                {% if user.username %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Username:</div>
+                    <div class="col-sm-9">{{ user.username }}</div>
+                </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Имя:</div>
+                    <div class="col-sm-9">{{ user.full_name or '—' }}</div>
+                </div>
+
+                {% if user.phone %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Телефон:</div>
+                    <div class="col-sm-9">{{ user.phone }}</div>
+                </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Telegram:</div>
+                    <div class="col-sm-9">
+                        {% if user.telegram_chat_id %}
+                            <i class="bi bi-telegram text-primary"></i> 
+                            {{ user.telegram_username or 'Привязан' }}
+                            <span class="badge bg-success">Подключен</span>
+                        {% else %}
+                            <span class="text-muted">Не подключен</span>
+                            <a href="{{ url_for('profile.notifications') }}" class="btn btn-sm btn-primary">Подключить</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Дата регистрации:</div>
+                    <div class="col-sm-9">{{ user.created_at[:10] }}</div>
+                </div>
+
+                {% if user.last_login_at %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Последний вход:</div>
+                    <div class="col-sm-9">{{ user.last_login_at[:19].replace('T', ' ') }}</div>
+                </div>
+                {% endif %}
+
+                {% if user.is_admin %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold">Роль:</div>
+                    <div class="col-sm-9">
+                        <span class="badge bg-danger">Администратор</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <hr>
+
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('profile.edit') }}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Редактировать профиль
+                    </a>
+                    <a href="{{ url_for('profile.change_password') }}" class="btn btn-secondary">
+                        <i class="bi bi-key"></i> Сменить пароль
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

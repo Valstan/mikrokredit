@@ -1,0 +1,15 @@
+[Unit]
+Description=MikroKredit Web Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=valstan
+WorkingDirectory=/home/valstan/mikrokredit
+Environment=MIKROKREDIT_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/mikrokredit
+ExecStart=/home/valstan/mikrokredit/.venv/bin/gunicorn --config /home/valstan/mikrokredit/gunicorn.conf.py "web:create_app()"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

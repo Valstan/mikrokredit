@@ -1,6 +1,6 @@
 from __future__ import annotations
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Text, Float, Boolean, ForeignKey, Sequence
+from sqlalchemy import Integer, String, Text, Float, Boolean, ForeignKey, Sequence, Index
 from typing import List, Optional
 
 
@@ -8,10 +8,110 @@ class Base(DeclarativeBase):
     pass
 
 
+# ==================== ПОЛЬЗОВАТЕЛИ И АУТЕНТИФИКАЦИЯ ====================
+
+class UserORM(Base):
+    """Пользователи системы"""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, Sequence('users_id_seq'), primary_key=True, autoincrement=True)
+    
+    # Основные данные
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    username: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    
+    # Личная информация
+    full_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    
+    # Telegram интеграция
+    telegram_chat_id: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    telegram_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Статусы
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verified_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Настройки уведомлений
+    email_notifications: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    telegram_notifications: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Временные метки
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    last_login_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Relationships
+    loans: Mapped[List["LoanORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    tasks: Mapped[List["TaskORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    task_categories: Mapped[List["TaskCategoryORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    email_tokens: Mapped[List["EmailVerificationTokenORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    password_reset_tokens: Mapped[List["PasswordResetTokenORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    sessions: Mapped[List["UserSessionORM"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+
+class EmailVerificationTokenORM(Base):
+    """Токены для подтверждения email"""
+    __tablename__ = "email_verification_tokens"
+    
+    id: Mapped[int] = mapped_column(Integer, Sequence('email_verification_tokens_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD HH:MM:SS
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    used_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    
+    user: Mapped[UserORM] = relationship(back_populates="email_tokens")
+
+
+class PasswordResetTokenORM(Base):
+    """Токены для сброса пароля"""
+    __tablename__ = "password_reset_tokens"
+    
+    id: Mapped[int] = mapped_column(Integer, Sequence('password_reset_tokens_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD HH:MM:SS
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    used_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    
+    user: Mapped[UserORM] = relationship(back_populates="password_reset_tokens")
+
+
+class UserSessionORM(Base):
+    """Активные сессии пользователей"""
+    __tablename__ = "user_sessions"
+    
+    id: Mapped[int] = mapped_column(Integer, Sequence('user_sessions_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    session_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    last_activity_at: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)
+    
+    user: Mapped[UserORM] = relationship(back_populates="sessions")
+
+
+# ==================== ЗАЙМЫ ====================
+
+
 class LoanORM(Base):
     __tablename__ = "loans"
 
     id: Mapped[int] = mapped_column(Integer, Sequence('loans_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
     website: Mapped[str] = mapped_column(String, nullable=False)
     loan_date: Mapped[str] = mapped_column(String, nullable=False)  # YYYY-MM-DD
     amount_borrowed: Mapped[float] = mapped_column(Float, nullable=False)
@@ -30,6 +130,7 @@ class LoanORM(Base):
     category: Mapped[Optional[str]] = mapped_column(String(50), default="microloan", nullable=True)  # microloan/installment/credit_card
     interest_rate: Mapped[Optional[float]] = mapped_column(Float, default=0.0, nullable=True)  # Процентная ставка
 
+    user: Mapped[UserORM] = relationship(back_populates="loans")
     installments: Mapped[List["InstallmentORM"]] = relationship(
         back_populates="loan", cascade="all, delete-orphan"
     )
@@ -56,11 +157,14 @@ class TaskCategoryORM(Base):
     __tablename__ = "task_categories"
 
     id: Mapped[int] = mapped_column(Integer, Sequence('task_categories_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     color: Mapped[str] = mapped_column(String(20), default="#3498db")
     icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
 
+    user: Mapped[UserORM] = relationship(back_populates="task_categories")
     tasks: Mapped[List["TaskORM"]] = relationship(back_populates="category", cascade="all, delete-orphan")
 
 
@@ -69,6 +173,8 @@ class TaskORM(Base):
     __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(Integer, Sequence('tasks_id_seq'), primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
@@ -101,6 +207,7 @@ class TaskORM(Base):
     is_paused: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     paused_until: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # YYYY-MM-DD
     
+    user: Mapped[UserORM] = relationship(back_populates="tasks")
     category: Mapped[Optional[TaskCategoryORM]] = relationship(back_populates="tasks")
     reminders: Mapped[List["TaskReminderORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")
     subtasks: Mapped[List["SubtaskORM"]] = relationship(back_populates="task", cascade="all, delete-orphan")

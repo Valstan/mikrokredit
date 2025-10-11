@@ -16,25 +16,61 @@ class TelegramNotifier:
         self.chat_id = chat_id or TELEGRAM_CHAT_ID
         self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
     
-    def send_message(self, text: str, parse_mode: str = "HTML") -> Optional[int]:
+    def send_to_user(self, user_id: int, text: str, parse_mode: str = "HTML", reply_markup=None) -> Optional[int]:
         """
-        Отправляет сообщение в Telegram
+        Отправляет сообщение конкретному пользователю
+        
+        Args:
+            user_id: ID пользователя в системе
+            text: Текст сообщения
+            parse_mode: Режим парсинга (HTML/Markdown)
+            reply_markup: Клавиатура для интерактивных кнопок
+            
+        Returns:
+            message_id если успешно, иначе None
+        """
+        # Получаем telegram_chat_id пользователя из БД
+        from app.db_sa import get_session
+        from app.models_sa import UserORM
+        
+        with get_session() as session:
+            user = session.query(UserORM).filter_by(id=user_id).first()
+            
+            if not user or not user.telegram_chat_id:
+                print(f"⚠️  User {user_id} has no Telegram linked")
+                return None
+            
+            if not user.telegram_notifications:
+                print(f"⚠️  User {user_id} has Telegram notifications disabled")
+                return None
+            
+            chat_id = user.telegram_chat_id
+        
+        # Отправляем сообщение
+        return self._send_to_chat(chat_id, text, parse_mode, reply_markup)
+    
+    def _send_to_chat(self, chat_id: str, text: str, parse_mode: str = "HTML", reply_markup=None) -> Optional[int]:
+        """
+        Внутренний метод отправки сообщения в конкретный чат
         
         Returns:
             message_id если успешно, иначе None
         """
-        if not self.bot_token or not self.chat_id:
+        if not self.bot_token or not chat_id:
             print("⚠️  Telegram credentials not configured")
             return None
         
         try:
             url = f"{self.base_url}/sendMessage"
             payload = {
-                "chat_id": self.chat_id,
+                "chat_id": chat_id,
                 "text": text,
                 "parse_mode": parse_mode,
                 "disable_web_page_preview": True
             }
+            
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
             
             response = requests.post(url, json=payload, timeout=10)
             
@@ -51,6 +87,79 @@ class TelegramNotifier:
         except Exception as e:
             print(f"❌ Telegram send error: {e}")
             return None
+    
+    def send_message(self, text: str, parse_mode: str = "HTML") -> Optional[int]:
+        """
+        Отправляет сообщение в Telegram на дефолтный chat_id
+        УСТАРЕЛО: Используйте send_to_user() для персональных уведомлений
+        
+        Returns:
+            message_id если успешно, иначе None
+        """
+        if not self.chat_id:
+            print("⚠️  Default chat_id not configured")
+            return None
+        
+        return self._send_to_chat(self.chat_id, text, parse_mode)
+    
+    def send_task_reminder_to_user(
+        self,
+        user_id: int,
+        task_title: str,
+        task_id: int,
+        reminder_id: int,
+        reminder_type: str = "general"
+    ) -> Optional[int]:
+        """
+        Отправляет напоминание о задаче конкретному пользователю с интерактивными кнопками
+        
+        Args:
+            user_id: ID пользователя
+            task_title: Название задачи
+            task_id: ID задачи
+            reminder_id: ID напоминания
+            reminder_type: Тип напоминания
+        """
+        from app.secrets import WEB_URL
+        
+        # Форматируем сообщение
+        icon = "🔔"
+        type_text = ""
+        
+        if reminder_type == "before_start":
+            icon = "⏰"
+            type_text = "скоро начнется"
+        elif reminder_type == "before_end":
+            icon = "⏱️"
+            type_text = "скоро закончится"
+        elif reminder_type == "periodic_before":
+            icon = "🔔"
+            type_text = "напоминание"
+        elif reminder_type == "periodic_during":
+            icon = "▶️"
+            type_text = "в процессе"
+        elif reminder_type == "after_end":
+            icon = "✅"
+            type_text = "завершено"
+        
+        now = datetime.now().strftime("%H:%M")
+        
+        message = f"{icon} <b>Напоминание о задаче</b>\n\n"
+        message += f"📋 {task_title}\n"
+        if type_text:
+            message += f"ℹ️ {type_text}\n"
+        message += f"🕐 {now}\n"
+        message += f"\n<a href='{WEB_URL}/tasks/{task_id}'>Открыть задачу</a>"
+        
+        # Создаем интерактивные кнопки
+        reply_markup = {
+            "inline_keyboard": [[
+                {"text": "✅ Выполнил", "callback_data": f"task_complete_{task_id}_{reminder_id}"},
+                {"text": "⏰ Отложить", "callback_data": f"task_postpone_{task_id}_{reminder_id}"}
+            ]]
+        }
+        
+        return self.send_to_user(user_id, message, reply_markup=reply_markup)
     
     def send_task_reminder(
         self,

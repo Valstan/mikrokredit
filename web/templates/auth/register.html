@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Регистрация - МикроКредит</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        .register-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .register-header h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .btn-register {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+        }
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .password-requirements {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <div class="register-header">
+            <h1>📋 Регистрация</h1>
+            <p class="text-muted">Создайте аккаунт в МикроКредит</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                <input 
+                    type="email" 
+                    class="form-control form-control-lg" 
+                    id="email" 
+                    name="email" 
+                    placeholder="your@email.com"
+                    value="{{ email or '' }}"
+                    required
+                    autofocus
+                >
+                <small class="text-muted">Мы отправим письмо для подтверждения</small>
+            </div>
+
+            <div class="mb-3">
+                <label for="full_name" class="form-label">Полное имя</label>
+                <input 
+                    type="text" 
+                    class="form-control form-control-lg" 
+                    id="full_name" 
+                    name="full_name" 
+                    placeholder="Иван Иванов"
+                    value="{{ full_name or '' }}"
+                >
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Пароль <span class="text-danger">*</span></label>
+                <input 
+                    type="password" 
+                    class="form-control form-control-lg" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Минимум 8 символов"
+                    required
+                    minlength="8"
+                >
+                <div class="password-requirements">
+                    <small>Минимум 8 символов</small>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="password_confirm" class="form-label">Подтверждение пароля <span class="text-danger">*</span></label>
+                <input 
+                    type="password" 
+                    class="form-control form-control-lg" 
+                    id="password_confirm" 
+                    name="password_confirm" 
+                    placeholder="Повторите пароль"
+                    required
+                    minlength="8"
+                >
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                <label class="form-check-label" for="agreeTerms">
+                    Я согласен с условиями использования
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-register w-100 btn-lg">
+                Зарегистрироваться
+            </button>
+        </form>
+
+        <div class="login-link">
+            <p>Уже есть аккаунт? <a href="{{ url_for('auth.login') }}" class="fw-bold text-decoration-none">Войти</a></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Проверка совпадения паролей
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password_confirm').value;
+            
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                alert('Пароли не совпадают!');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -58,6 +58,12 @@ def get_secret(key: str, default: Optional[str] = None) -> str:
 # Загружаем .env при импорте модуля
 load_env_file()
 
+# Загружаем SMTP настройки из .env.smtp (если есть)
+project_root = Path(__file__).parent.parent
+smtp_env_path = project_root / ".env.smtp"
+if smtp_env_path.exists():
+    load_env_file(smtp_env_path)
+
 
 # === БАЗА ДАННЫХ ===
 DB_HOST = get_secret("DB_HOST", "localhost")
@@ -86,6 +92,16 @@ YANDEX_DISK_TOKEN = get_secret("YANDEX_DISK_TOKEN")
 # === ПРИЛОЖЕНИЕ ===
 FLASK_SECRET_KEY = get_secret("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 WEB_URL = get_secret("WEB_URL", "http://localhost")
+SITE_URL = get_secret("SITE_URL", WEB_URL)  # URL для ссылок в email
+
+
+# === EMAIL (SMTP) ===
+SMTP_HOST = get_secret("SMTP_HOST", "smtp.yandex.ru")
+SMTP_PORT = int(get_secret("SMTP_PORT", "587"))
+SMTP_USER = get_secret("SMTP_USER", "")
+SMTP_PASSWORD = get_secret("SMTP_PASSWORD", "")
+EMAIL_FROM = get_secret("EMAIL_FROM", "noreply@mikrokredit.local")
+EMAIL_NAME = get_secret("EMAIL_NAME", "МикроКредит")
 
 
 # === TELEGRAM (дополнительно) ===

@@ -28,12 +28,15 @@ def clear_cache():
 @login_required
 def index():
     """Главная страница задач"""
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     filter_by = request.args.get('filter', 'all')
     category_id = request.args.get('category')
     
     with get_session() as session:
-        # Базовый запрос
-        query = select(TaskORM)
+        # Базовый запрос - только задачи текущего пользователя
+        query = select(TaskORM).where(TaskORM.user_id == user.id)
         
         # Фильтры
         if filter_by == 'today':
@@ -72,17 +75,26 @@ def index():
                 'subtasks': [{'title': st.title, 'completed': st.completed} for st in task.subtasks]
             })
         
-        # Получаем категории для фильтра
-        categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
+        # Получаем категории для фильтра - только для текущего пользователя
+        categories_orm = session.execute(
+            select(TaskCategoryORM).where(TaskCategoryORM.user_id == user.id)
+        ).scalars().all()
         categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
         
-        # Статистика
+        # Статистика - только для текущего пользователя
         stats = {
-            'total': session.execute(select(func.count(TaskORM.id))).scalar() or 0,
-            'completed': session.execute(select(func.count(TaskORM.id)).where(TaskORM.status == 1)).scalar() or 0,
-            'pending': session.execute(select(func.count(TaskORM.id)).where(TaskORM.status == 0)).scalar() or 0,
+            'total': session.execute(
+                select(func.count(TaskORM.id)).where(TaskORM.user_id == user.id)
+            ).scalar() or 0,
+            'completed': session.execute(
+                select(func.count(TaskORM.id)).where(TaskORM.user_id == user.id, TaskORM.status == 1)
+            ).scalar() or 0,
+            'pending': session.execute(
+                select(func.count(TaskORM.id)).where(TaskORM.user_id == user.id, TaskORM.status == 0)
+            ).scalar() or 0,
             'overdue': session.execute(
                 select(func.count(TaskORM.id)).where(
+                    TaskORM.user_id == user.id,
                     TaskORM.due_date < datetime.now().isoformat(),
                     TaskORM.status == 0
                 )
@@ -161,6 +173,9 @@ def category_new():
 @login_required
 def new():
     """Создание новой задачи с расписанием"""
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -171,6 +186,7 @@ def new():
                 # Создаем задачу
                 task_data = data['task']
                 task = TaskORM(
+                    user_id=user.id,
                     title=task_data['title'],
                     description=task_data.get('description', ''),
                     importance=task_data.get('importance', 2),
@@ -194,7 +210,10 @@ def new():
     
     # GET - показываем форму
     with get_session() as session:
-        categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
+        # Только категории текущего пользователя
+        categories_orm = session.execute(
+            select(TaskCategoryORM).where(TaskCategoryORM.user_id == user.id)
+        ).scalars().all()
         categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
     
     return render_template(
@@ -208,6 +227,9 @@ def new():
 @login_required
 def edit(task_id):
     """Редактирование задачи"""
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -242,8 +264,8 @@ def edit(task_id):
     # GET - показываем форму
     with get_session() as session:
         task_orm = session.get(TaskORM, task_id)
-        if not task_orm:
-            flash('Задача не найдена', 'error')
+        if not task_orm or task_orm.user_id != user.id:
+            flash('Задача не найдена или доступ запрещен', 'error')
             return redirect(url_for('tasks.index'))
         
         # Преобразуем задачу в JSON
@@ -256,8 +278,10 @@ def edit(task_id):
             'schedule_config': task_orm.schedule_config or '{}'
         })
         
-        # Категории
-        categories_orm = session.execute(select(TaskCategoryORM)).scalars().all()
+        # Категории - только для текущего пользователя
+        categories_orm = session.execute(
+            select(TaskCategoryORM).where(TaskCategoryORM.user_id == user.id)
+        ).scalars().all()
         categories = [{'id': c.id, 'name': c.name, 'color': c.color} for c in categories_orm]
     
     return render_template(

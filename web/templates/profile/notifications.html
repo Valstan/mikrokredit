@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления - МикроКредит{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h4><i class="bi bi-bell"></i> Настройки уведомлений</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('profile.notifications') }}">
+                    <input type="hidden" name="action" value="update_settings">
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="email_notifications" 
+                               name="email_notifications" {% if user.email_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="email_notifications">
+                            <strong>Email уведомления</strong><br>
+                            <small class="text-muted">Получать уведомления о займах и задачах на email</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="telegram_notifications" 
+                               name="telegram_notifications" {% if user.telegram_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="telegram_notifications">
+                            <strong>Telegram уведомления</strong><br>
+                            <small class="text-muted">Получать уведомления в Telegram боте</small>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Сохранить настройки
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-telegram"></i> Telegram интеграция</h4>
+            </div>
+            <div class="card-body">
+                {% if user.telegram_chat_id %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> Telegram подключен: <strong>{{ user.telegram_username or 'ID: ' + user.telegram_chat_id }}</strong>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('profile.notifications') }}">
+                        <input type="hidden" name="action" value="unlink_telegram">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены?')">
+                            <i class="bi bi-x-circle"></i> Отключить Telegram
+                        </button>
+                    </form>
+                {% else %}
+                    {% set code = request.args.get('code') %}
+                    
+                    {% if code %}
+                        <!-- Показываем код для привязки -->
+                        <div class="alert alert-success">
+                            <h5 class="alert-heading"><i class="bi bi-check-circle"></i> Код сгенерирован!</h5>
+                            <hr>
+                            <p class="mb-3">Ваш код для привязки Telegram:</p>
+                            <div class="text-center my-3">
+                                <h2 class="display-4 text-primary" id="linkCode">{{ code }}</h2>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyCode('{{ code }}')">
+                                    <i class="bi bi-clipboard"></i> Скопировать код
+                                </button>
+                            </div>
+                            <hr>
+                            <p class="mb-2"><strong>Выберите удобный способ:</strong></p>
+                            
+                            <div class="d-grid gap-2">
+                                <!-- Способ 1: Прямая ссылка (автоматически) -->
+                                <a href="https://t.me/valstan_bot?start={{ code }}" 
+                                   target="_blank" 
+                                   class="btn btn-lg btn-primary">
+                                    <i class="bi bi-telegram"></i> Открыть бота и подключить автоматически
+                                </a>
+                                
+                                <!-- Способ 2: Вручную -->
+                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#manualInstructions">
+                                    <i class="bi bi-info-circle"></i> Или подключить вручную
+                                </button>
+                            </div>
+                            
+                            <div class="collapse mt-3" id="manualInstructions">
+                                <div class="card card-body">
+                                    <h6>Инструкция для ручного подключения:</h6>
+                                    <ol class="mb-0">
+                                        <li>Откройте Telegram</li>
+                                        <li>Найдите бота: <a href="https://t.me/valstan_bot" target="_blank">@valstan_bot</a></li>
+                                        <li>Отправьте команду: <code>/start {{ code }}</code></li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <small class="text-muted mt-2 d-block">
+                                <i class="bi bi-clock"></i> Код действителен 10 минут
+                            </small>
+                        </div>
+                    {% else %}
+                        <!-- Показываем кнопку генерации -->
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Telegram не подключен
+                        </div>
+                        
+                        <h5>Зачем подключать Telegram?</h5>
+                        <ul>
+                            <li>📱 Получайте уведомления о займах прямо в Telegram</li>
+                            <li>⏰ Напоминания о задачах и важных событиях</li>
+                            <li>🔔 Быстрые уведомления в реальном времени</li>
+                        </ul>
+                        
+                        <form method="POST" action="{{ url_for('profile.notifications') }}">
+                            <input type="hidden" name="action" value="generate_code">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-telegram"></i> Подключить Telegram
+                            </button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyCode(code) {
+    // Копируем код в буфер обмена
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(function() {
+            // Показываем уведомление
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check"></i> Скопировано!';
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success');
+            
+            setTimeout(function() {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+            }, 2000);
+        });
+    } else {
+        // Fallback для старых браузеров
+        const input = document.createElement('input');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        alert('Код скопирован: ' + code);
+    }
+}
+</script>
+    </div>
+</div>
+{% endblock %}
+

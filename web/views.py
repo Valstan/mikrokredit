@@ -13,6 +13,17 @@ from app.models_sa import LoanORM, InstallmentORM, TaskORM
 bp = Blueprint("views", __name__)
 
 
+def check_loan_access(session, loan_id: int, user_id: int):
+    """
+    Проверка прав доступа к займу
+    Returns: loan если доступ разрешен, иначе None
+    """
+    loan = session.get(LoanORM, loan_id)
+    if loan is None or loan.user_id != user_id:
+        return None
+    return loan
+
+
 @bp.get("/healthz")
 def healthz():
     return jsonify({"status": "ok"})
@@ -22,9 +33,12 @@ def healthz():
 @login_required
 def dashboard():
     """Главная страница - Dashboard"""
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     with get_session() as session:
-        # Используем ТУ ЖЕ логику что и в разделе займов
-        loans = session.execute(select(LoanORM)).scalars().all()
+        # Фильтруем займы по текущему пользователю
+        loans = session.execute(select(LoanORM).where(LoanORM.user_id == user.id)).scalars().all()
         today = date.today()
         total_remaining = 0.0
         urgent_count = 0
@@ -142,17 +156,21 @@ def dashboard():
 @bp.route("/loans")
 @login_required
 def loans_index():
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     q = (request.args.get("q", "") or "").strip().lower()
     
-    # Try to get cached data first
-    cache_key = f"loans_data_{hash(q)}"
-    cached_data = cache_manager.get_cached_loans_data()
+    # Try to get cached data first (disabled for multi-user to avoid mixing data)
+    # cache_key = f"loans_data_{user.id}_{hash(q)}"
+    # cached_data = cache_manager.get_cached_loans_data()
     
-    if cached_data and not q:  # Use cache only for main page without search
-        return render_template("index.html", **cached_data)
+    # if cached_data and not q:  # Use cache only for main page without search
+    #     return render_template("index.html", **cached_data)
     
     with get_session() as session:
-        loans = session.execute(select(LoanORM)).scalars().all()
+        # Фильтруем займы по текущему пользователю
+        loans = session.execute(select(LoanORM).where(LoanORM.user_id == user.id)).scalars().all()
         if q:
             loans = [l for l in loans if q in (l.org_name or "").lower() or q in (l.website or "").lower() or q in (l.notes or "").lower()]
         enriched = []
@@ -228,6 +246,9 @@ def loan_new():
 @bp.route("/loan/<int:loan_id>", methods=["GET", "POST"])
 @login_required
 def loan_edit(loan_id: int | None = None):
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     if request.method == "POST":
         try:
             org_name = request.form.get("org_name", "").strip()
@@ -251,6 +272,7 @@ def loan_edit(loan_id: int | None = None):
             with get_session() as session:
                 if loan_id is None:
                     loan = LoanORM(
+                        user_id=user.id,
                         website=website,
                         loan_date=loan_date,
                         amount_borrowed=amount_borrowed,
@@ -275,9 +297,9 @@ def loan_edit(loan_id: int | None = None):
                     flash("Кредит создан", "success")
                 else:
                     loan = session.get(LoanORM, loan_id)
-                    if loan is None:
-                        flash("Кредит не найден", "error")
-                        return redirect(url_for("views.index"))
+                    if loan is None or loan.user_id != user.id:
+                        flash("Кредит не найден или доступ запрещен", "error")
+                        return redirect(url_for("views.loans_index"))
                     loan.website = website
                     loan.loan_date = loan_date
                     loan.amount_borrowed = amount_borrowed
@@ -300,6 +322,12 @@ def loan_edit(loan_id: int | None = None):
     try:
         with get_session() as session:
             loan = session.get(LoanORM, loan_id) if loan_id is not None else None
+            
+            # Проверка прав доступа
+            if loan is not None and loan.user_id != user.id:
+                flash("Доступ запрещен", "error")
+                return redirect(url_for("views.loans_index"))
+            
             insts = []
             remaining = 0.0
             total_due = 0.0
@@ -331,16 +359,19 @@ def loan_edit(loan_id: int | None = None):
 @bp.post("/loan/<int:loan_id>/installments/add")
 @login_required
 def add_inst(loan_id: int):
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     due_date = request.form.get("due_date", "")
     amount = float(request.form.get("amount", 0) or 0)
     if amount <= 0:
         flash("Сумма должна быть больше нуля", "error")
         return redirect(url_for("views.loan_edit", loan_id=loan_id))
     with get_session() as session:
-        loan = session.get(LoanORM, loan_id)
+        loan = check_loan_access(session, loan_id, user.id)
         if loan is None:
-            flash("Кредит не найден", "error")
-            return redirect(url_for("views.index"))
+            flash("Кредит не найден или доступ запрещен", "error")
+            return redirect(url_for("views.loans_index"))
         inst = InstallmentORM(
             loan_id=loan_id, due_date=due_date, amount=amount, paid=0, paid_date=None, created_at=date.today().isoformat()
         )
@@ -468,10 +499,13 @@ def loan_new_v2():
 @login_required
 def loan_edit_v2(loan_id: int):
     """Новый интерфейс редактирования займа"""
+    from app.auth import get_current_user
+    user = get_current_user()
+    
     with get_session() as session:
         loan_orm = session.get(LoanORM, loan_id)
-        if loan_orm is None:
-            flash("Займ не найден", "error")
+        if loan_orm is None or loan_orm.user_id != user.id:
+            flash("Займ не найден или доступ запрещен", "error")
             return redirect(url_for("views.loans_index"))
         
         # Извлекаем данные в словарь

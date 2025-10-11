@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Изменить Email - МикроКредит{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-envelope"></i> Изменить Email</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>Важно:</strong>
+                    <ul class="mb-0">
+                        <li>Email используется для входа в систему</li>
+                        <li>На новый email будет отправлено письмо для подтверждения</li>
+                        <li>До подтверждения новый email будет помечен как "не подтвержден"</li>
+                    </ul>
+                </div>
+
+                <form method="POST" action="{{ url_for('profile.change_email') }}">
+                    <div class="mb-3">
+                        <label for="current_email" class="form-label">Текущий Email</label>
+                        <input type="email" class="form-control" id="current_email" 
+                               value="{{ user.email }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_email" class="form-label">Новый Email</label>
+                        <input type="email" class="form-control" id="new_email" 
+                               name="new_email" placeholder="new@email.com" required autofocus>
+                        <small class="text-muted">Новый адрес для входа в систему</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Подтвердите паролем</label>
+                        <input type="password" class="form-control" id="password" 
+                               name="password" placeholder="Введите ваш пароль" required>
+                        <small class="text-muted">Для безопасности требуется подтверждение</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Изменить Email
+                        </button>
+                        <a href="{{ url_for('profile.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

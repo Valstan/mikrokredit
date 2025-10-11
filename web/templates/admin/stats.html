@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2><i class="bi bi-graph-up"></i> Статистика системы</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+            <i class="bi bi-people"></i> Пользователи
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="display-4">{{ stats.users.total }}</h1>
+                <p class="text-muted">Всего пользователей</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="display-4 text-success">{{ stats.users.active }}</h1>
+                <p class="text-muted">Активных</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="display-4 text-primary">{{ stats.users.verified }}</h1>
+                <p class="text-muted">С подтвержденным email</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h1 class="display-4 text-info">{{ stats.users.telegram }}</h1>
+                <p class="text-muted">Подключили Telegram</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Контент</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-6">Займов:</div>
+                    <div class="col-6 text-end"><strong>{{ stats.content.loans }}</strong></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6">Задач:</div>
+                    <div class="col-6 text-end"><strong>{{ stats.content.tasks }}</strong></div>
+                </div>
+                <div class="row">
+                    <div class="col-6">Категорий:</div>
+                    <div class="col-6 text-end"><strong>{{ stats.content.categories }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Последние регистрации</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Имя</th>
+                                <th>Дата</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in stats.recent_users %}
+                            <tr>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.full_name or '—' }}</td>
+                                <td>{{ user.created_at[:10] }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Активен</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Неактивен</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

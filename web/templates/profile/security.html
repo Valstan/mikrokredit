@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Безопасность - МикроКредит{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h4><i class="bi bi-shield-check"></i> Безопасность</h4>
+            </div>
+            <div class="card-body">
+                <h5>Пароль</h5>
+                <p class="text-muted">Последнее изменение: {{ user.updated_at[:10] if user.updated_at else 'Неизвестно' }}</p>
+                <a href="{{ url_for('profile.change_password') }}" class="btn btn-primary">
+                    <i class="bi bi-key"></i> Сменить пароль
+                </a>
+
+                <hr class="my-4">
+
+                <h5>Активные сессии</h5>
+                <p class="text-muted">
+                    Последний вход: {{ user.last_login_at[:19].replace('T', ' ') if user.last_login_at else 'Неизвестно' }}
+                </p>
+
+                <hr class="my-4">
+
+                <h5 class="text-danger">Опасная зона</h5>
+                <div class="alert alert-danger">
+                    <strong>Удаление аккаунта</strong><br>
+                    Это действие необратимо. Все ваши данные (займы, задачи, категории) будут удалены.
+                </div>
+
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> Удалить аккаунт
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal подтверждения удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Подтверждение удаления</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('profile.delete_account') }}">
+                <div class="modal-body">
+                    <p><strong>Вы уверены, что хотите удалить свой аккаунт?</strong></p>
+                    <p>Это действие необратимо. Все ваши данные будут удалены:</p>
+                    <ul>
+                        <li>Все займы и платежи</li>
+                        <li>Все задачи и напоминания</li>
+                        <li>Категории и настройки</li>
+                    </ul>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Введите ваш пароль для подтверждения:</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Да, удалить аккаунт</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

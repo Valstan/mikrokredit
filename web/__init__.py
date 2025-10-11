@@ -1,5 +1,5 @@
 from __future__ import annotations
-from flask import Flask
+from flask import Flask, g
 from datetime import timedelta
 
 
@@ -7,7 +7,14 @@ def create_app() -> Flask:
     import os
     template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
     app = Flask(__name__, template_folder=template_dir)
-    app.config["SECRET_KEY"] = "mikrokredit_secret_key_2025_secure_random_string"
+    
+    # Конфигурация из secrets
+    try:
+        from app.secrets import FLASK_SECRET_KEY
+        app.config["SECRET_KEY"] = FLASK_SECRET_KEY
+    except ImportError:
+        app.config["SECRET_KEY"] = "mikrokredit_secret_key_2025_secure_random_string"
+    
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
     
@@ -34,5 +41,17 @@ def create_app() -> Flask:
     
     from .tasks_views import bp as tasks_bp
     app.register_blueprint(tasks_bp)
+    
+    from .profile_views import bp as profile_bp
+    app.register_blueprint(profile_bp)
+    
+    from .admin_views import bp as admin_bp
+    app.register_blueprint(admin_bp)
+
+    # Контекстный процессор для доступа к пользователю в шаблонах
+    @app.context_processor
+    def inject_user():
+        from app.auth import get_current_user
+        return dict(current_user=get_current_user())
 
     return app

@@ -56,3 +56,7 @@ backups/*.gz
 # Temporary files
 *.tmp
 .cache/
+.env.smtp
+# Systemd service files with database passwords
+*.service
+!*.service.example

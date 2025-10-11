@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.email }} - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2><i class="bi bi-person"></i> Пользователь: {{ user.email }}</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Информация</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">ID:</div>
+                    <div class="col-8">{{ user.id }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Email:</div>
+                    <div class="col-8">
+                        {{ user.email }}
+                        {% if user.email_verified %}
+                            <span class="badge bg-success">Подтвержден</span>
+                        {% else %}
+                            <span class="badge bg-warning">Не подтвержден</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Имя:</div>
+                    <div class="col-8">{{ user.full_name or '—' }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Телефон:</div>
+                    <div class="col-8">{{ user.phone or '—' }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Telegram:</div>
+                    <div class="col-8">
+                        {% if user.telegram_username %}
+                            @{{ user.telegram_username }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Регистрация:</div>
+                    <div class="col-8">{{ user.created_at[:19].replace('T', ' ') }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 fw-bold">Последний вход:</div>
+                    <div class="col-8">{{ user.last_login_at[:19].replace('T', ' ') if user.last_login_at else '—' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Статистика</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-6 fw-bold">Займов:</div>
+                    <div class="col-6">{{ stats.loans_count }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6 fw-bold">Задач:</div>
+                    <div class="col-6">{{ stats.tasks_count }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6 fw-bold">Категорий:</div>
+                    <div class="col-6">{{ stats.categories_count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Действия</h5>
+            </div>
+            <div class="card-body">
+                {% if user.id != current_user.id %}
+                <form method="POST" action="{{ url_for('admin.toggle_active', user_id=user.id) }}" class="mb-2">
+                    {% if user.is_active %}
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Деактивировать пользователя?')">
+                            <i class="bi bi-pause-circle"></i> Деактивировать
+                        </button>
+                    {% else %}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-play-circle"></i> Активировать
+                        </button>
+                    {% endif %}
+                </form>
+
+                <form method="POST" action="{{ url_for('admin.make_admin', user_id=user.id) }}">
+                    {% if user.is_admin %}
+                        <button type="submit" class="btn btn-secondary w-100" onclick="return confirm('Снять права администратора?')">
+                            <i class="bi bi-shield-x"></i> Снять права админа
+                        </button>
+                    {% else %}
+                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Назначить администратором?')">
+                            <i class="bi bi-shield-check"></i> Сделать администратором
+                        </button>
+                    {% endif %}
+                </form>
+                {% else %}
+                <div class="alert alert-info">
+                    Вы не можете изменять свой собственный аккаунт
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
